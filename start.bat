@@ -1,6 +1,7 @@
 @echo off
-title MultiChat - Kick, TikTok, Twitch & YouTube (OBS)
+title MultiChat OBS Studio
 color 0A
+
 echo ========================================================
 echo   Iniciando MultiChat para OBS Studio
 echo ========================================================
@@ -17,18 +18,19 @@ if %errorlevel% neq 0 (
 )
 
 if not exist "node_modules\" (
-    echo Instalando dependencias necesarias (esto solo toma unos segundos la primera vez)...
+    echo Instalando dependencias iniciales, por favor espera...
     call npm install
 )
 
 echo.
 echo ========================================================
-echo   Servidor iniciado exitosamente en:
+echo   Servidor iniciado en:
 echo   - Dock OBS:     http://localhost:3000/dock.html
 echo   - Alertas OBS:  http://localhost:3000/alerts.html
 echo   - Chat OBS:     http://localhost:3000/chat.html
 echo ========================================================
 echo.
+
 start "" "http://localhost:3000/dock.html"
 node server.js
 
