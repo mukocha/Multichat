@@ -151,11 +151,13 @@
     }
 
     .alert-custom-image {
-      max-width: 150px;
-      max-height: 120px;
+      max-width: 240px;
+      max-height: 180px;
       object-fit: contain;
-      filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.4));
+      filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.45));
       animation: alertPulseMedia 1.8s infinite alternate ease-in-out;
+      border-radius: 8px;
+      margin-bottom: 6px;
     }
 
     @keyframes alertPulseMedia {
@@ -251,39 +253,81 @@
       document.addEventListener(evt, initAudio, { once: true });
     });
 
-    // Sintetizador Web Audio API: Sonido nítido
-    function playChime(volume = 80) {
-      if (!config.alertSound) return;
-
-      try {
-        initAudio();
-        if (!audioCtx) return;
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume().catch(() => {});
-        }
-
-        const notes = [523.25, 659.25, 783.99, 1046.50];
+    // Sintetizador Web Audio API: Sonidos nítidos y personalizables
+    const SYNTH_EFFECTS = {
+      chime: (vol = 80) => {
+        initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
-
-        notes.forEach((freq, idx) => {
+        const v = (vol / 100);
+        const o1 = audioCtx.createOscillator();
+        const o2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(v * 0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        o1.frequency.setValueAtTime(523.25, now);
+        o2.frequency.setValueAtTime(659.25, now + 0.08);
+        o1.connect(gain); o2.connect(gain); gain.connect(audioCtx.destination);
+        o1.start(now); o1.stop(now + 0.35);
+        o2.start(now + 0.08); o2.stop(now + 0.35);
+      },
+      fanfare: (vol = 80) => {
+        initAudio(); if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const v = (vol / 100);
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
-
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
-
-          const gainVal = (volume / 100) * 0.25;
-          gain.gain.setValueAtTime(0.001, now + idx * 0.09);
-          gain.gain.exponentialRampToValueAtTime(gainVal, now + idx * 0.09 + 0.04);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.4);
-
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-
-          osc.start(now + idx * 0.09);
-          osc.stop(now + idx * 0.09 + 0.45);
+          gain.gain.setValueAtTime(v * 0.25, now + (i * 0.07));
+          gain.gain.exponentialRampToValueAtTime(0.001, now + (i * 0.07) + 0.3);
+          osc.frequency.setValueAtTime(freq, now + (i * 0.07));
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(now + (i * 0.07)); osc.stop(now + (i * 0.07) + 0.3);
         });
-      } catch (err) {}
+      },
+      coin: (vol = 80) => {
+        initAudio(); if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const v = (vol / 100);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.08);
+        gain.gain.setValueAtTime(v * 0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.35);
+      },
+      bubble: (vol = 80) => {
+        initAudio(); if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const v = (vol / 100);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.12);
+        gain.gain.setValueAtTime(v * 0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.15);
+      },
+      horn: (vol = 80) => {
+        initAudio(); if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const v = (vol / 100);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, now);
+        gain.gain.setValueAtTime(v * 0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.4);
+      }
+    };
+
+    function playChime(volume = 80) {
+      if (SYNTH_EFFECTS.chime) SYNTH_EFFECTS.chime(volume);
     }
 
     function escapeHtml(text) {
@@ -297,7 +341,7 @@
       const t = String(type).toLowerCase();
       if (t === 'follow') return 'follow';
       if (t === 'sub' || t === 'subscription' || t === 'giftsub') return 'sub';
-      if (t.includes('gift') || t === 'cheer') return 'gift';
+      if (t.includes('gift') || t === 'cheer' || t === 'bits') return 'gift';
       if (t === 'host') return 'host';
       if (t === 'raid' || t === 'share') return 'raid';
       return 'follow';
@@ -306,7 +350,7 @@
     function getDefaultIcon(alert) {
       if (alert.type === 'sub' || alert.type === 'subscription' || alert.type === 'giftsub') return '⭐';
       if (alert.type && alert.type.includes('gift')) return '🎁';
-      if (alert.type === 'cheer') return '💎';
+      if (alert.type === 'cheer' || alert.type === 'bits') return '💎';
       if (alert.type === 'host') return '📡';
       if (alert.type === 'share' || alert.type === 'raid') return '🚀';
       return alert.platform === 'kick' ? '🟢' : (alert.platform === 'twitch' ? '🟣' : (alert.platform === 'youtube' ? '🔴' : '💖'));
@@ -337,17 +381,18 @@
     }
 
     function resolveAlertMedia(alert) {
-      if (!config.alertMedia) return { image: '', sound: '' };
+      if (!config.alertMedia) return { image: '', sound: '', volume: (config.alertVolume || 80) };
       const platform = (alert.platform || 'kick').toLowerCase();
       const type = (alert.type || 'follow').toLowerCase();
 
-      // 1. Identificador específico
+      // Identificador específico de evento
       let specificKey = '';
       if (platform === 'tiktok') {
         if (type === 'follow') specificKey = 'tiktok_follow';
+        else if (type === 'share') specificKey = 'tiktok_share';
         else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('le')) specificKey = 'tiktok_gift_lion';
         else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('ros')) specificKey = 'tiktok_gift_rose';
-        else specificKey = 'tiktok_gift_rose';
+        else specificKey = 'tiktok_gift';
       } else if (platform === 'kick') {
         if (type === 'follow') specificKey = 'kick_follow';
         else if (type === 'sub' || type === 'subscription') specificKey = 'kick_sub';
@@ -359,6 +404,7 @@
         else if (type === 'sub' || type === 'subscription') specificKey = 'twitch_sub';
         else if (type === 'host') specificKey = 'twitch_host';
         else if (type === 'raid') specificKey = 'twitch_raid';
+        else if (type === 'bits' || type === 'cheer') specificKey = 'twitch_bits';
       } else if (platform === 'youtube') {
         if (type === 'sub' || type === 'follow' || type === 'subscription') specificKey = 'youtube_sub';
         else if (type === 'member' || type === 'membership') specificKey = 'youtube_member';
@@ -368,39 +414,52 @@
       const platKey = `${platform}_${type}`;
       const normType = getNormalizedType(type);
 
-      // Cascada independiente para imagen
       let image = '';
-      if (specificKey && config.alertMedia[specificKey]?.image) image = config.alertMedia[specificKey].image;
-      else if (config.alertMedia[platKey]?.image) image = config.alertMedia[platKey].image;
-      else if (config.alertMedia[normType]?.image) image = config.alertMedia[normType].image;
-
-      // Cascada independiente para sonido
       let sound = '';
-      if (specificKey && config.alertMedia[specificKey]?.sound) sound = config.alertMedia[specificKey].sound;
-      else if (config.alertMedia[platKey]?.sound) sound = config.alertMedia[platKey].sound;
-      else if (config.alertMedia[normType]?.sound) sound = config.alertMedia[normType].sound;
+      let volume = config.alertVolume !== undefined ? config.alertVolume : 80;
 
-      return { image, sound };
+      const candidateKeys = [specificKey, platKey, normType].filter(Boolean);
+
+      for (const k of candidateKeys) {
+        if (!image && config.alertMedia[k] && config.alertMedia[k].image) {
+          image = config.alertMedia[k].image;
+        }
+        if (!sound && config.alertMedia[k] && config.alertMedia[k].sound) {
+          sound = config.alertMedia[k].sound;
+        }
+        if (config.alertMedia[k] && config.alertMedia[k].volume !== undefined) {
+          volume = config.alertMedia[k].volume;
+        }
+      }
+
+      return { image, sound, volume };
     }
 
     function showAlert(alert) {
       alertBox.className = `platform-${alert.platform || 'kick'}`;
       const normType = getNormalizedType(alert.type);
       const mediaCfg = resolveAlertMedia(alert);
+      const alertVol = mediaCfg.volume !== undefined ? mediaCfg.volume : (config.alertVolume || 80);
 
-      // 1. Audio personalizado o campana
+      // 1. Audio personalizado o sintetizador
       if (config.alertSound !== false) {
-        if (mediaCfg.sound && String(mediaCfg.sound).trim().length > 0) {
-          playCustomAudio(mediaCfg.sound.trim(), config.alertVolume || 80);
+        const soundSrc = mediaCfg.sound || 'default';
+        if (soundSrc === 'default' || !soundSrc) {
+          if (alert.type && (alert.type.includes('sub') || alert.type.includes('member'))) SYNTH_EFFECTS.fanfare(alertVol);
+          else if (alert.type && (alert.type.includes('gift') || alert.type.includes('superchat') || alert.type.includes('bits'))) SYNTH_EFFECTS.coin(alertVol);
+          else if (alert.type && alert.type.includes('follow')) SYNTH_EFFECTS.chime(alertVol);
+          else SYNTH_EFFECTS.bubble(alertVol);
+        } else if (SYNTH_EFFECTS[soundSrc]) {
+          SYNTH_EFFECTS[soundSrc](alertVol);
         } else {
-          playChime(config.alertVolume || 80);
+          playCustomAudio(soundSrc, alertVol);
         }
       }
 
       // Preparar elementos de medios e insignias
       let mediaHtml = '';
       if (mediaCfg.image) {
-        mediaHtml = `<img class="alert-custom-image" src="${mediaCfg.image}" alt="${normType}">`;
+        mediaHtml = `<img class="alert-custom-image" src="${mediaCfg.image}" alt="${normType}" onerror="this.style.display='none'">`;
       } else if (alert.gift && alert.gift.icon) {
         mediaHtml = `<img class="gift-image" src="${alert.gift.icon}" alt="Gift">`;
       } else {

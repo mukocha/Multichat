@@ -53,13 +53,19 @@ app.post('/api/config', (req, res) => {
   const validation = validateConfigPatch(req.body || {});
   if (validation.error) return res.status(400).json({ ok: false, error: validation.error });
   const incoming = validation.value;
+  const mergedAlertMedia = { ...(getConfig().alertMedia || {}) };
+  if (incoming.alertMedia) {
+    for (const [k, v] of Object.entries(incoming.alertMedia)) {
+      mergedAlertMedia[k] = {
+        ...(mergedAlertMedia[k] || {}),
+        ...v
+      };
+    }
+  }
   setConfig({
     ...getConfig(),
     ...incoming,
-    alertMedia: {
-      ...(getConfig().alertMedia || {}),
-      ...(incoming.alertMedia || {})
-    }
+    alertMedia: mergedAlertMedia
   });
   saveConfig(getConfig());
   io.emit('config:update', getConfig());
