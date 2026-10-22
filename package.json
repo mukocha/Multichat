@@ -1,0 +1,28 @@
+{
+  "name": "multichat-obs",
+  "version": "2.0.0",
+  "description": "MultiChat Pro y Sistema de Alertas para Kick, TikTok, Twitch y YouTube en OBS Studio",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^2.4.0",
+    "socket.io": "^4.7.5",
+    "tiktok-live-connector": "^2.5.0",
+    "tmi.js": "^1.8.5"
+  },
+  "keywords": [
+    "kick",
+    "tiktok",
+    "obs",
+    "stream",
+    "alerts",
+    "multichat"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>MultiChat - Contador de Viewers</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: transparent;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 10px;
+    }
+
+    .viewers-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      transition: all 0.3s ease;
+    }
+
+    /* Temas */
+    body.theme-transparent .viewers-wrapper {
+      background: transparent;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 2px 8px rgba(0, 0, 0, 0.9);
+    }
+
+    body.theme-glass .viewers-wrapper {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    body.theme-solid .viewers-wrapper {
+      background: #11141c;
+      border: 1px solid #232734;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    }
+
+    .platform-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .platform-pill.kick {
+      color: #53fc18;
+    }
+
+    .platform-pill.tiktok {
+      color: #ff0077;
+    }
+
+    .platform-pill.twitch {
+      color: #bf94ff;
+    }
+
+    .platform-pill.youtube {
+      color: #ff3333;
+    }
+
+    .platform-pill.total {
+      color: #ffffff;
+      padding-left: 6px;
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .count-number {
+      font-family: 'Inter', sans-serif;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .dot-live {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulseLive 1.5s infinite;
+    }
+
+    .dot-live.kick {
+      background: #53fc18;
+      box-shadow: 0 0 8px #53fc18;
+    }
+
+    .dot-live.tiktok {
+      background: linear-gradient(135deg, #00f2fe, #ff0050);
+      box-shadow: 0 0 8px #ff0050;
+    }
+
+    .dot-live.twitch {
+      background: #9146ff;
+      box-shadow: 0 0 8px #9146ff;
+    }
+
+    .dot-live.youtube {
+      background: #ff0000;
+      box-shadow: 0 0 8px #ff0000;
+    }
+
+    @keyframes pulseLive {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.25); opacity: 0.7; }
+    }
+  </style>
+</head>
+<body class="theme-glass">
+
+  <div class="viewers-wrapper" id="viewers-box">
+    <!-- Kick -->
+    <div class="platform-pill kick" id="pill-kick" title="Kick">
+      <span class="dot-live kick"></span>
+      <span class="count-number" id="count-kick">0</span>
+    </div>
+
+    <!-- TikTok -->
+    <div class="platform-pill tiktok" id="pill-tiktok" title="TikTok">
+      <span class="dot-live tiktok"></span>
+      <span class="count-number" id="count-tiktok">0</span>
+    </div>
+
+    <!-- Twitch -->
+    <div class="platform-pill twitch" id="pill-twitch" title="Twitch">
+      <span class="dot-live twitch"></span>
+      <span class="count-number" id="count-twitch">0</span>
+    </div>
+
+    <!-- YouTube -->
+    <div class="platform-pill youtube" id="pill-youtube" title="YouTube">
+      <span class="dot-live youtube"></span>
+      <span class="count-number" id="count-youtube">0</span>
+    </div>
+
+    <!-- Total -->
+    <div class="platform-pill total" id="pill-total" title="Total">
+      <span>👥</span>
+      <span class="count-number" id="count-total">0</span>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const theme = urlParams.get('theme') || 'glass';
+    const fontSize = urlParams.get('fontSize');
+    const hideOffline = urlParams.get('hideOffline') === 'true';
+
+    document.body.className = `theme-${theme}`;
+
+    if (fontSize) {
+      document.querySelectorAll('.platform-pill').forEach(el => {
+        el.style.fontSize = `${fontSize}px`;
+      });
+    }
+
+    socket.on('viewers:update', (data) => {
+      if (!data) return;
+      const kViewers = data.kick?.viewers || 0;
+      const tViewers = data.tiktok?.viewers || 0;
+      const twViewers = data.twitch?.viewers || 0;
+      const yViewers = data.youtube?.viewers || 0;
+      const total = data.total !== undefined ? data.total : (kViewers + tViewers + twViewers + yViewers);
+
+      document.getElementById('count-kick').textContent = kViewers.toLocaleString();
+      document.getElementById('count-tiktok').textContent = tViewers.toLocaleString();
+      document.getElementById('count-twitch').textContent = twViewers.toLocaleString();
+      document.getElementById('count-youtube').textContent = yViewers.toLocaleString();
+      document.getElementById('count-total').textContent = total.toLocaleString();
+
+      if (hideOffline) {
+        document.getElementById('pill-kick').style.display = (data.kick?.isLive || kViewers > 0) ? 'inline-flex' : 'none';
+        document.getElementById('pill-tiktok').style.display = (data.tiktok?.isLive || tViewers > 0) ? 'inline-flex' : 'none';
+        document.getElementById('pill-twitch').style.display = (data.twitch?.isLive || twViewers > 0) ? 'inline-flex' : 'none';
+        document.getElementById('pill-youtube').style.display = (data.youtube?.isLive || yViewers > 0) ? 'inline-flex' : 'none';
+      }
+    });
+
+    // Cargar viewers iniciales de inmediato
+    fetch('/api/viewers')
+      .then(r => r.json())
+      .then(data => {
+        if (!data) return;
+        const kViewers = data.kick?.viewers || 0;
+        const tViewers = data.tiktok?.viewers || 0;
+        const twViewers = data.twitch?.viewers || 0;
+        const yViewers = data.youtube?.viewers || 0;
+        const total = data.total !== undefined ? data.total : (kViewers + tViewers + twViewers + yViewers);
+
+        document.getElementById('count-kick').textContent = kViewers.toLocaleString();
+        document.getElementById('count-tiktok').textContent = tViewers.toLocaleString();
+        document.getElementById('count-twitch').textContent = twViewers.toLocaleString();
+        document.getElementById('count-youtube').textContent = yViewers.toLocaleString();
+        document.getElementById('count-total').textContent = total.toLocaleString();
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

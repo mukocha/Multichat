@@ -1,0 +1,2901 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MultiChat - Control Unificado de Chat y Overlays</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            outfit: ['Outfit', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            kick: '#53fc18',
+            tiktok: '#ff0050',
+            tiktokCyan: '#00f2fe',
+            twitch: '#9146ff',
+            youtube: '#ff0000'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: #090d16;
+      color: #f1f5f9;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .tab-btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tab-btn.active {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: #10b981;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-3 md:p-6 font-sans">
+  <div class="max-w-7xl mx-auto space-y-5">
+
+    <!-- Top Header Principal con Branding MultiChat -->
+    <header class="glass-card rounded-2xl p-4 md:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+          <span class="text-2xl">⚡</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl md:text-3xl font-extrabold font-outfit tracking-tight text-white">
+              MultiChat
+            </h1>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              v2.5 Live
+            </span>
+          </div>
+          <p class="text-xs md:text-sm text-gray-400">
+            Control unificado de Chat y Overlays para Kick, TikTok, Twitch y YouTube
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Platform Live Status Pills -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <!-- Kick -->
+        <div id="badge-kick" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-800 bg-black/40 text-xs font-semibold">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500" id="dot-kick"></span>
+          <span>Kick: <span id="text-kick" class="text-gray-400">Desconectado</span></span>
+          <span id="dash-viewers-kick" class="ml-1 px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 font-mono text-[11px]" style="display:none;">👁️ 0</span>
+        </div>
+
+        <!-- TikTok -->
+        <div id="badge-tiktok" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-800 bg-black/40 text-xs font-semibold">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500" id="dot-tiktok"></span>
+          <span>TikTok: <span id="text-tiktok" class="text-gray-400">Desconectado</span></span>
+          <span id="dash-viewers-tiktok" class="ml-1 px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-400 font-mono text-[11px]" style="display:none;">👁️ 0</span>
+        </div>
+
+        <!-- Twitch -->
+        <div id="badge-twitch" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-800 bg-black/40 text-xs font-semibold">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500" id="dot-twitch"></span>
+          <span>Twitch: <span id="text-twitch" class="text-gray-400">Desconectado</span></span>
+          <span id="dash-viewers-twitch" class="ml-1 px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-mono text-[11px]" style="display:none;">👁️ 0</span>
+        </div>
+
+        <!-- YouTube -->
+        <div id="badge-youtube" class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-800 bg-black/40 text-xs font-semibold">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500" id="dot-youtube"></span>
+          <span>YouTube: <span id="text-youtube" class="text-gray-400">Desconectado</span></span>
+          <span id="dash-viewers-youtube" class="ml-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-mono text-[11px]" style="display:none;">👁️ 0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Barra de Navegación por Pestañas / Menú -->
+    <nav class="flex items-center gap-2 overflow-x-auto pb-1 border-b border-gray-800/80 custom-scrollbar text-xs md:text-sm font-semibold font-outfit">
+      <button id="tab-btn-chat" onclick="switchTab('chat')"
+        class="tab-btn active px-4 py-2.5 rounded-xl border border-transparent text-gray-300 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <span>💬</span> MultiChat en Vivo
+      </button>
+
+      <button id="tab-btn-obs" onclick="switchTab('obs')"
+        class="tab-btn px-4 py-2.5 rounded-xl border border-transparent text-gray-300 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <span>📺</span> Enlaces para OBS
+      </button>
+
+      <button id="tab-btn-channels" onclick="switchTab('channels')"
+        class="tab-btn px-4 py-2.5 rounded-xl border border-transparent text-gray-300 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <span>🎮</span> Conectar Canales
+      </button>
+
+      <button id="tab-btn-alerts" onclick="switchTab('alerts')"
+        class="tab-btn px-4 py-2.5 rounded-xl border border-transparent text-gray-300 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <span>🔔</span> Alertas & Simulador
+      </button>
+
+      <button id="tab-btn-settings" onclick="switchTab('settings')"
+        class="tab-btn px-4 py-2.5 rounded-xl border border-transparent text-gray-300 hover:text-white hover:bg-gray-800/50 flex items-center gap-2 flex-shrink-0">
+        <span>⚙️</span> Personalización
+      </button>
+    </nav>
+
+    <!-- ============================================================== -->
+    <!-- PANEL 1: MULTICHAT EN VIVO                                     -->
+    <!-- ============================================================== -->
+    <section id="panel-chat" class="tab-content space-y-4">
+      <div class="glass-card rounded-2xl p-4 md:p-6 space-y-4">
+        <!-- Top Toolbar del Chat -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+              <span class="text-emerald-400">●</span> MultiChat en Tiempo Real
+            </h2>
+            <span id="chat-msg-count" class="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-md font-mono">0 mensajes</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Filtros de plataforma para el monitor -->
+            <div class="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-gray-800 text-xs">
+              <button onclick="filterMonitorChat('all', this)" class="chat-filter-btn px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold transition">
+                Todos
+              </button>
+              <button onclick="filterMonitorChat('kick', this)" class="chat-filter-btn px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">
+                Kick
+              </button>
+              <button onclick="filterMonitorChat('tiktok', this)" class="chat-filter-btn px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">
+                TikTok
+              </button>
+              <button onclick="filterMonitorChat('twitch', this)" class="chat-filter-btn px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">
+                Twitch
+              </button>
+              <button onclick="filterMonitorChat('youtube', this)" class="chat-filter-btn px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">
+                YouTube
+              </button>
+            </div>
+
+            <button onclick="clearChatMonitor()"
+              class="px-3 py-1.5 bg-gray-800/80 hover:bg-gray-800 border border-gray-700/80 rounded-xl text-xs font-semibold text-gray-300 hover:text-white transition flex items-center gap-1.5"
+              title="Limpiar ventana del chat">
+              🗑 Limpiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Monitor de Mensajes Ampliado -->
+        <div id="live-chat-monitor"
+          class="h-[480px] overflow-y-auto space-y-1.5 p-4 bg-black/50 rounded-xl border border-gray-800/80 custom-scrollbar text-sm leading-relaxed">
+          <div class="text-center text-gray-500 py-24 flex flex-col items-center justify-center gap-2">
+            <span class="text-3xl opacity-50">💬</span>
+            <p>Esperando mensajes en vivo de Kick, TikTok, Twitch o YouTube...</p>
+            <p class="text-xs text-gray-600">Envía un mensaje desde tus directos o usa los botones de prueba abajo.</p>
+          </div>
+        </div>
+
+        <!-- Barra inferior para pruebas de chat instantáneas -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center gap-2">
+          <div class="flex items-center gap-1.5 text-xs text-gray-400 font-semibold whitespace-nowrap">
+            <span>⚡ Pruebas rápidas:</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 flex-1">
+            <button onclick="sendTestChat('kick')"
+              class="py-1.5 px-3 rounded-xl bg-green-950/40 hover:bg-green-900/60 border border-green-500/30 text-green-300 text-xs font-semibold transition active:scale-95 flex items-center gap-1.5">
+              <span>🟢</span> Kick Chat
+            </button>
+            <button onclick="sendTestChat('tiktok')"
+              class="py-1.5 px-3 rounded-xl bg-pink-950/40 hover:bg-pink-900/60 border border-pink-500/30 text-pink-300 text-xs font-semibold transition active:scale-95 flex items-center gap-1.5">
+              <span>💖</span> TikTok Chat
+            </button>
+            <button onclick="sendTestChat('twitch')"
+              class="py-1.5 px-3 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 text-xs font-semibold transition active:scale-95 flex items-center gap-1.5">
+              <span>🟣</span> Twitch Chat
+            </button>
+            <button onclick="sendTestChat('youtube')"
+              class="py-1.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-300 text-xs font-semibold transition active:scale-95 flex items-center gap-1.5">
+              <span>🔴</span> YouTube Chat
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PANEL 2: ENLACES PARA OBS STUDIO                               -->
+    <!-- ============================================================== -->
+    <section id="panel-obs" class="tab-content hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 md:p-6 space-y-5">
+        <div>
+          <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+            <span class="text-cyan-400">●</span> Enlaces y Fuentes para OBS Studio
+          </h2>
+          <p class="text-xs text-gray-400 mt-1">
+            Copia los enlaces correspondientes según si deseas una ventana para ti en OBS o un overlay para la pantalla de tu stream.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- 1. DOCK PARA EL STREAMER -->
+          <div class="p-4 bg-blue-950/30 rounded-2xl border border-blue-500/40 space-y-3 md:col-span-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">⭐</span>
+                <div>
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    MultiChat Dock para OBS <span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full font-semibold">Exclusivo Streamer</span>
+                  </h3>
+                  <p class="text-xs text-gray-300 mt-0.5">
+                    Pega esto en OBS en: <b>Paneles > Paneles de navegador personalizados</b>. Chat en vivo limpio, sin notificaciones en pantalla, con alerta sonora.
+                  </p>
+                </div>
+              </div>
+              <span class="text-xs font-mono px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">Panel Personalizado</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="url-dock" readonly value="http://localhost:3000/dock.html"
+                class="flex-1 bg-black/60 border border-blue-500/30 rounded-xl px-3 py-2 text-xs text-blue-200 font-mono select-all">
+              <button onclick="copyToClipboard('url-dock', this)"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-bold rounded-xl text-white transition active:scale-95">
+                Copiar
+              </button>
+              <a href="/dock.html" target="_blank"
+                class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-xs rounded-xl text-gray-300 transition" title="Abrir en pestaña nueva">
+                ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 2. CHAT TRANSPARENTE -->
+          <div class="p-4 bg-gray-900/70 rounded-2xl border border-gray-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">💬</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Chat Transparente</h4>
+                  <p class="text-[11px] text-gray-400">Overlay para la pantalla del directo</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">450 x 650 px</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="url-chat" readonly value="http://localhost:3000/chat.html"
+                class="flex-1 bg-black/50 border border-gray-800 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 font-mono select-all">
+              <button onclick="copyToClipboard('url-chat', this)"
+                class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-xl text-emerald-400 border border-gray-700 transition">
+                Copiar
+              </button>
+              <a href="/chat.html" target="_blank"
+                class="px-2.5 py-1.5 bg-gray-800/80 hover:bg-gray-700 text-xs rounded-xl text-gray-400 transition" title="Abrir en pestaña nueva">
+                ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 3. CAJA DE ALERTAS -->
+          <div class="p-4 bg-gray-900/70 rounded-2xl border border-gray-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔔</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Caja de Alertas Emergentes</h4>
+                  <p class="text-[11px] text-gray-400">Follows, Subs, Gifts, Hosts y Raids</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">800 x 400 px</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="url-alerts" readonly value="http://localhost:3000/alerts.html"
+                class="flex-1 bg-black/50 border border-gray-800 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 font-mono select-all">
+              <button onclick="copyToClipboard('url-alerts', this)"
+                class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-xl text-emerald-400 border border-gray-700 transition">
+                Copiar
+              </button>
+              <a href="/alerts.html" target="_blank"
+                class="px-2.5 py-1.5 bg-gray-800/80 hover:bg-gray-700 text-xs rounded-xl text-gray-400 transition" title="Abrir en pestaña nueva">
+                ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 4. CONTADOR DE VIEWERS -->
+          <div class="p-4 bg-gray-900/70 rounded-2xl border border-gray-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">👥</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Contador de Viewers Compacto</h4>
+                  <p class="text-[11px] text-gray-400">Puntos de color y número tabular</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">350 x 50 px</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="url-viewers" readonly value="http://localhost:3000/viewers.html"
+                class="flex-1 bg-black/50 border border-gray-800 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 font-mono select-all">
+              <button onclick="copyToClipboard('url-viewers', this)"
+                class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-xl text-indigo-400 border border-gray-700 transition">
+                Copiar
+              </button>
+              <a href="/viewers.html" target="_blank"
+                class="px-2.5 py-1.5 bg-gray-800/80 hover:bg-gray-700 text-xs rounded-xl text-gray-400 transition" title="Abrir en pestaña nueva">
+                ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- 5. FEED DE NOTIFICACIONES -->
+          <div class="p-4 bg-gray-900/70 rounded-2xl border border-gray-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">📜</span>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Feed de Notificaciones OBS</h4>
+                  <p class="text-[11px] text-gray-400">Historial continuo (borrado tras 10 min)</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400">400 x 600 px</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="url-events" readonly value="http://localhost:3000/events.html"
+                class="flex-1 bg-black/50 border border-gray-800 rounded-xl px-2.5 py-1.5 text-xs text-gray-300 font-mono select-all">
+              <button onclick="copyToClipboard('url-events', this)"
+                class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-xl text-emerald-400 border border-gray-700 transition">
+                Copiar
+              </button>
+              <a href="/events.html" target="_blank"
+                class="px-2.5 py-1.5 bg-gray-800/80 hover:bg-gray-700 text-xs rounded-xl text-gray-400 transition" title="Abrir en pestaña nueva">
+                ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PANEL 3: CONECTAR CANALES                                      -->
+    <!-- ============================================================== -->
+    <section id="panel-channels" class="tab-content hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 md:p-6 space-y-5">
+        <div>
+          <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+            <span class="text-emerald-400">●</span> Configuración de Canales y Cuentas
+          </h2>
+          <p class="text-xs text-gray-400 mt-1">
+            Ingresa los nombres de usuario de tus canales para escuchar el chat y los eventos en vivo.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Kick -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-green-400 flex items-center gap-1.5">
+                <span>🟢</span> Canal de Kick
+              </label>
+              <span class="text-[10px] text-gray-500">Pusher API</span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-xs">kick.com/</span>
+              <input id="input-kick" type="text" placeholder="tu_canal"
+                class="w-full bg-gray-900/90 border border-gray-700 rounded-xl py-2 pl-24 pr-3 text-sm focus:outline-none focus:border-green-400 text-white transition">
+            </div>
+          </div>
+
+          <!-- TikTok -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-pink-400 flex items-center gap-1.5">
+                <span>💖</span> Usuario de TikTok Live
+              </label>
+              <span class="text-[10px] text-yellow-400/80 font-semibold">Requiere estar EN VIVO</span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold text-xs">@</span>
+              <input id="input-tiktok" type="text" placeholder="tu_usuario"
+                class="w-full bg-gray-900/90 border border-gray-700 rounded-xl py-2 pl-8 pr-3 text-sm focus:outline-none focus:border-pink-500 text-white transition">
+            </div>
+          </div>
+
+          <!-- Twitch -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                <span>🟣</span> Canal de Twitch
+              </label>
+              <span class="text-[10px] text-gray-500">tmi.js IRC</span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-purple-400 font-bold text-xs">twitch.tv/</span>
+              <input id="input-twitch" type="text" placeholder="tu_canal"
+                class="w-full bg-gray-900/90 border border-gray-700 rounded-xl py-2 pl-24 pr-3 text-sm focus:outline-none focus:border-purple-500 text-white transition">
+            </div>
+          </div>
+
+          <!-- YouTube -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                <span>🔴</span> Canal de YouTube (Espectadores)
+              </label>
+              <span class="text-[10px] text-gray-500">Web Scrape</span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-red-500 font-bold text-xs">youtube.com/</span>
+              <input id="input-youtube" type="text" placeholder="@tu_canal o nombre"
+                class="w-full bg-gray-900/90 border border-gray-700 rounded-xl py-2 pl-28 pr-3 text-sm focus:outline-none focus:border-red-500 text-white transition">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 pt-2">
+          <button id="btn-connect" onclick="connectStreams()"
+            class="flex-1 min-w-[200px] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-black font-extrabold py-3 px-6 rounded-xl text-sm transition shadow-lg shadow-green-500/20 active:scale-[0.98]">
+            ⚡ Conectar y Guardar Cuentas
+          </button>
+          <button id="btn-disconnect" onclick="disconnectStreams()"
+            class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-5 rounded-xl text-sm transition active:scale-[0.98]" title="Pausa las conexiones en vivo sin olvidar tus cuentas">
+            ⏸️ Pausar Conexiones
+          </button>
+          <button id="btn-unlink" onclick="unlinkChannels()"
+            class="bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-400 border border-gray-800 font-bold py-3 px-4 rounded-xl text-sm transition active:scale-[0.98]" title="Borra las cuentas configuradas">
+            🗑️ Desvincular Cuentas
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PANEL 4: ALERTAS & SIMULADOR                                   -->
+    <!-- ============================================================== -->
+    <section id="panel-alerts" class="tab-content hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+        <!-- Columna Izquierda: Botones de Prueba (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="glass-card rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+                <span class="text-purple-400">●</span> Simulador de Alertas en Vivo
+              </h2>
+              <div class="flex items-center gap-2">
+                <button id="btn-sim-sound" onclick="toggleSimulatorSound()"
+                  class="py-1 px-2.5 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95"
+                  title="Reproducir el sonido asignado aquí en el panel al presionar botones">
+                  🔊 Audio en Panel: ON
+                </button>
+                <span class="text-[11px] text-gray-500 hidden sm:inline">Prueba audio y visuales</span>
+              </div>
+            </div>
+
+              <!-- Pruebas de Chat Multiplataforma -->
+              <div class="pb-3 border-b border-gray-800">
+                <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider block mb-1.5">💬 Mensajes de Chat (Dock OBS & Overlay)</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button onclick="sendTestChat('kick')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">🟢 Test Chat</div>
+                  </button>
+                  <button onclick="sendTestChat('tiktok')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-pink-400">TikTok</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-pink-300">💖 Test Chat</div>
+                  </button>
+                  <button onclick="sendTestChat('twitch')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-purple-400">Twitch</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-purple-300">🟣 Test Chat</div>
+                  </button>
+                  <button onclick="sendTestChat('youtube')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-red-500/30 hover:border-red-400 hover:bg-red-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-red-400">YouTube</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-red-300">🔴 Test Chat</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pruebas Kick -->
+              <div>
+                <span class="text-[11px] font-bold text-green-400 uppercase tracking-wider block mb-1.5">Kick Events</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button onclick="sendTestAlert('kick', 'follow')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">🟢 Follow</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('kick', 'sub')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">⭐ Sub (Tier 1)</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('kick', 'giftsub')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">🎁 5 Subs Gift</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('kick', 'host')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">📡 Host (38)</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('kick', 'raid')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-green-500/30 hover:border-green-400 hover:bg-green-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-green-400">Kick</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-green-300">🚀 Raid (54)</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pruebas TikTok -->
+              <div class="pt-2 border-t border-gray-800">
+                <span class="text-[11px] font-bold text-pink-400 uppercase tracking-wider block mb-1.5">TikTok Events</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button onclick="sendTestAlert('tiktok', 'follow')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-pink-400">TikTok</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-pink-300">💖 Follow</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('tiktok', 'gift-rose')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-pink-400">TikTok</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-pink-300">🌹 Rosa (1 🪙)</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('tiktok', 'gift-lion')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-pink-400">TikTok</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-pink-300">🦁 León (29k 🪙)</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pruebas Twitch -->
+              <div class="pt-2 border-t border-gray-800">
+                <span class="text-[11px] font-bold text-purple-400 uppercase tracking-wider block mb-1.5">Twitch Events</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button onclick="sendTestAlert('twitch', 'follow')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-purple-400">Twitch</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-purple-300">🟣 Follow</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('twitch', 'sub')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-purple-400">Twitch</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-purple-300">⭐ Prime Sub</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('twitch', 'host')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-purple-400">Twitch</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-purple-300">📡 Host (25)</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('twitch', 'raid')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-purple-400">Twitch</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-purple-300">🚀 Raid (42)</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pruebas YouTube -->
+              <div class="pt-2 border-t border-gray-800">
+                <span class="text-[11px] font-bold text-red-400 uppercase tracking-wider block mb-1.5">YouTube Events</span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button onclick="sendTestAlert('youtube', 'sub')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-red-500/30 hover:border-red-400 hover:bg-red-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-red-400">YouTube</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-red-300">🔴 Suscriptor</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('youtube', 'member')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-red-500/30 hover:border-red-400 hover:bg-red-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-red-400">YouTube</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-red-300">⭐ Miembro</div>
+                  </button>
+
+                  <button onclick="sendTestAlert('youtube', 'superchat')"
+                    class="p-2.5 rounded-xl bg-gray-900/90 border border-red-500/30 hover:border-red-400 hover:bg-red-500/10 text-left transition group">
+                    <div class="text-[9px] uppercase font-bold text-red-400">YouTube</div>
+                    <div class="text-xs font-semibold text-white group-hover:text-red-300">💰 Super Chat</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Viewers -->
+              <div class="pt-2 border-t border-gray-800">
+                <button onclick="sendTestViewers()"
+                  class="w-full py-2.5 px-4 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-2">
+                  <span>👥</span> Simular Viewers en Kick, TikTok, Twitch y YouTube
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Monitor de Alertas en Vivo (5 cols) -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="glass-card rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+                <span class="text-pink-400">●</span> Registro de Alertas
+              </h2>
+              <button onclick="clearAlertHistory()" class="text-[11px] text-gray-400 hover:text-white transition">
+                Limpiar
+              </button>
+            </div>
+            <p class="text-[11px] text-gray-500">
+              ⏱️ Las notificaciones se eliminan automáticamente tras 10 minutos de inactividad.
+            </p>
+
+            <div id="live-events-monitor"
+              class="h-[360px] overflow-y-auto space-y-2 p-3 bg-black/50 rounded-xl border border-gray-800/80 custom-scrollbar text-xs">
+              <div class="text-center text-gray-500 py-20">
+                Aún no hay notificaciones...
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PANEL 5: PERSONALIZACIÓN                                       -->
+    <!-- ============================================================== -->
+    <section id="panel-settings" class="tab-content hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 md:p-6 space-y-5">
+        <div>
+          <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+            <span class="text-yellow-400">●</span> Personalización Visual y de Audio
+          </h2>
+          <p class="text-xs text-gray-400 mt-1">
+            Personaliza cómo se ven tus overlays en directo y el comportamiento de las alertas.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <!-- Estilo de Fondo -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-white block">Estilo de Fondo del Chat</span>
+              <span class="text-gray-500 text-[11px]">Apariencia en la fuente de OBS</span>
+            </div>
+            <select id="setting-theme" onchange="updateSettings()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+              <option value="transparent" selected>🌟 Transparente (Minimalista)</option>
+              <option value="glass">🌫 Cristal Translúcido (Glass)</option>
+              <option value="solid">⬛ Oscuro Sólido</option>
+            </select>
+          </div>
+
+          <!-- Tamaño de Texto -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-white block">Tamaño de Texto</span>
+              <span class="text-gray-500 text-[11px]">Legibilidad de los mensajes</span>
+            </div>
+            <select id="setting-font-size" onchange="updateSettings()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+              <option value="14">14 px (Pequeño)</option>
+              <option value="16" selected>16 px (Normal)</option>
+              <option value="18">18 px (Mediano)</option>
+              <option value="22">22 px (Grande)</option>
+            </select>
+          </div>
+
+          <!-- Volumen de Alertas -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-white block">Volumen de Alertas: <span id="vol-val" class="text-emerald-400">80%</span></span>
+              <span class="text-gray-500 text-[11px]">Sonido de campana nítido</span>
+            </div>
+            <input id="setting-volume" type="range" min="0" max="100" value="80" oninput="updateSettings()"
+              class="w-36 accent-emerald-400">
+          </div>
+
+          <!-- Duración de Alertas -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-white block">Duración de Alertas</span>
+              <span class="text-gray-500 text-[11px]">Tiempo en pantalla en OBS</span>
+            </div>
+            <select id="setting-duration" onchange="updateSettings()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+              <option value="4">4 segundos</option>
+              <option value="5" selected>5 segundos</option>
+              <option value="7">7 segundos</option>
+              <option value="10">10 segundos</option>
+            </select>
+          </div>
+
+          <!-- Desvanecimiento de Chat -->
+          <div class="p-4 bg-black/40 rounded-2xl border border-gray-800 flex items-center justify-between md:col-span-2">
+            <div>
+              <span class="font-bold text-white block">Ocultar Mensajes de Chat Inactivos</span>
+              <span class="text-gray-500 text-[11px]">Si nadie escribe, desvanecer mensajes viejos</span>
+            </div>
+            <select id="setting-fade" onchange="updateSettings()" class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+              <option value="0" selected>Nunca (Mensajes Permanentes)</option>
+              <option value="10">Tras 10 segundos</option>
+              <option value="20">Tras 20 segundos</option>
+              <option value="30">Tras 30 segundos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: MEDIOS Y SONIDOS POR EVENTO -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800/80 pb-3">
+          <div>
+            <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+              <span class="text-pink-400">●</span> Imágenes / GIFs y Sonidos por Alerta
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Sube tus propios archivos desde tu PC o pega URLs directas para cada evento en OBS.
+            </p>
+          </div>
+          <button onclick="saveAlertCustomization()"
+            class="py-2 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 transition active:scale-95 flex items-center gap-2 self-start sm:self-auto">
+            <span>💾</span> Guardar Cambios
+          </button>
+        </div>
+
+        <!-- Filtro por plataforma para las alertas -->
+        <div class="flex items-center gap-2 flex-wrap border-b border-gray-800/80 pb-3">
+          <span class="text-xs text-gray-400 font-bold mr-1">Filtrar por:</span>
+          <button type="button" onclick="filterCustomEvents('all')" id="filter-btn-all"
+            class="custom-filter-btn py-1 px-3 rounded-xl bg-gray-700 text-white font-bold text-xs border border-gray-500 transition">
+            🌐 Todos los Eventos (15)
+          </button>
+          <button type="button" onclick="filterCustomEvents('kick')" id="filter-btn-kick"
+            class="custom-filter-btn py-1 px-3 rounded-xl bg-gray-900 text-green-400 font-bold text-xs border border-green-500/30 hover:bg-green-500/10 transition">
+            🟢 Kick (5)
+          </button>
+          <button type="button" onclick="filterCustomEvents('tiktok')" id="filter-btn-tiktok"
+            class="custom-filter-btn py-1 px-3 rounded-xl bg-gray-900 text-pink-400 font-bold text-xs border border-pink-500/30 hover:bg-pink-500/10 transition">
+            💖 TikTok (3)
+          </button>
+          <button type="button" onclick="filterCustomEvents('twitch')" id="filter-btn-twitch"
+            class="custom-filter-btn py-1 px-3 rounded-xl bg-gray-900 text-purple-400 font-bold text-xs border border-purple-500/30 hover:bg-purple-500/10 transition">
+            🟣 Twitch (4)
+          </button>
+          <button type="button" onclick="filterCustomEvents('youtube')" id="filter-btn-youtube"
+            class="custom-filter-btn py-1 px-3 rounded-xl bg-gray-900 text-red-400 font-bold text-xs border border-red-500/30 hover:bg-red-500/10 transition">
+            🔴 YouTube (3)
+          </button>
+        </div>
+
+        <!-- Tarjetas de los 15 eventos del simulador -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+
+          <!-- 1. Kick Follow -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-green-500/20 hover:border-green-500/40 transition space-y-3" data-platform="kick">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-green-400 flex items-center gap-2">
+                <span>🟢</span> Kick - Nuevo Seguidor (Follow)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">kick • follow</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-kick_follow" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-kick_follow" placeholder="URL o sube un archivo..." oninput="updateImagePreview('kick_follow', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-kick_follow" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('kick_follow', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-kick_follow').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('kick_follow', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-kick_follow" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('kick_follow', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                <input type="file" id="file-snd-kick_follow" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('kick_follow', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-kick_follow').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('kick_follow')"
+                  class="py-1.5 px-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('kick_follow', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-kick_follow" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 2. Kick Sub -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-green-500/20 hover:border-green-500/40 transition space-y-3" data-platform="kick">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-green-400 flex items-center gap-2">
+                <span>⭐</span> Kick - Suscripción (Tier 1)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">kick • sub</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-kick_sub" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-kick_sub" placeholder="URL o sube un archivo..." oninput="updateImagePreview('kick_sub', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-kick_sub" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('kick_sub', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-kick_sub').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('kick_sub', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-kick_sub" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('kick_sub', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                <input type="file" id="file-snd-kick_sub" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('kick_sub', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-kick_sub').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('kick_sub')"
+                  class="py-1.5 px-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('kick_sub', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-kick_sub" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 3. Kick Giftsub -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-green-500/20 hover:border-green-500/40 transition space-y-3" data-platform="kick">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-green-400 flex items-center gap-2">
+                <span>🎁</span> Kick - 5 Subs Gift (Suscripciones Regaladas)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">kick • giftsub</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-kick_giftsub" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-kick_giftsub" placeholder="URL o sube un archivo..." oninput="updateImagePreview('kick_giftsub', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-kick_giftsub" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('kick_giftsub', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-kick_giftsub').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('kick_giftsub', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-kick_giftsub" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('kick_giftsub', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                <input type="file" id="file-snd-kick_giftsub" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('kick_giftsub', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-kick_giftsub').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('kick_giftsub')"
+                  class="py-1.5 px-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('kick_giftsub', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-kick_giftsub" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 4. Kick Host -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-green-500/20 hover:border-green-500/40 transition space-y-3" data-platform="kick">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-green-400 flex items-center gap-2">
+                <span>📡</span> Kick - Host del Canal (38)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">kick • host</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-kick_host" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-kick_host" placeholder="URL o sube un archivo..." oninput="updateImagePreview('kick_host', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-kick_host" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('kick_host', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-kick_host').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('kick_host', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-kick_host" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('kick_host', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                <input type="file" id="file-snd-kick_host" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('kick_host', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-kick_host').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('kick_host')"
+                  class="py-1.5 px-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('kick_host', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-kick_host" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 5. Kick Raid -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-green-500/20 hover:border-green-500/40 transition space-y-3" data-platform="kick">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-green-400 flex items-center gap-2">
+                <span>🚀</span> Kick - Raid de Comunidad (54)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">kick • raid</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-kick_raid" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-kick_raid" placeholder="URL o sube un archivo..." oninput="updateImagePreview('kick_raid', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-kick_raid" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('kick_raid', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-kick_raid').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('kick_raid', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-kick_raid" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('kick_raid', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-green-500 outline-none">
+                <input type="file" id="file-snd-kick_raid" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('kick_raid', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-kick_raid').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('kick_raid')"
+                  class="py-1.5 px-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('kick_raid', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-kick_raid" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 6. TikTok Follow -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-pink-500/20 hover:border-pink-500/40 transition space-y-3" data-platform="tiktok">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-pink-400 flex items-center gap-2">
+                <span>💖</span> TikTok - Nuevo Seguidor (Follow)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">tiktok • follow</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-tiktok_follow" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-tiktok_follow" placeholder="URL o sube un archivo..." oninput="updateImagePreview('tiktok_follow', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-tiktok_follow" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('tiktok_follow', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-tiktok_follow').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('tiktok_follow', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-tiktok_follow" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('tiktok_follow', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                <input type="file" id="file-snd-tiktok_follow" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('tiktok_follow', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-tiktok_follow').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('tiktok_follow')"
+                  class="py-1.5 px-2.5 rounded-xl bg-pink-950/60 hover:bg-pink-900/80 text-pink-300 border border-pink-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('tiktok_follow', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-tiktok_follow" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 7. TikTok Rosa -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-pink-500/20 hover:border-pink-500/40 transition space-y-3" data-platform="tiktok">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-pink-400 flex items-center gap-2">
+                <span>🌹</span> TikTok - Regalo Rosa (1 🪙)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">tiktok • gift-rose</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-tiktok_gift_rose" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-tiktok_gift_rose" placeholder="URL o sube un archivo..." oninput="updateImagePreview('tiktok_gift_rose', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-tiktok_gift_rose" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('tiktok_gift_rose', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-tiktok_gift_rose').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('tiktok_gift_rose', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-tiktok_gift_rose" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('tiktok_gift_rose', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                <input type="file" id="file-snd-tiktok_gift_rose" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('tiktok_gift_rose', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-tiktok_gift_rose').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('tiktok_gift_rose')"
+                  class="py-1.5 px-2.5 rounded-xl bg-pink-950/60 hover:bg-pink-900/80 text-pink-300 border border-pink-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('tiktok_gift_rose', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-tiktok_gift_rose" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 8. TikTok León -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-pink-500/20 hover:border-pink-500/40 transition space-y-3" data-platform="tiktok">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-pink-400 flex items-center gap-2">
+                <span>🦁</span> TikTok - Súper Regalo León (29,999 🪙)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">tiktok • gift-lion</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-tiktok_gift_lion" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-tiktok_gift_lion" placeholder="URL o sube un archivo..." oninput="updateImagePreview('tiktok_gift_lion', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-tiktok_gift_lion" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('tiktok_gift_lion', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-tiktok_gift_lion').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('tiktok_gift_lion', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-tiktok_gift_lion" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('tiktok_gift_lion', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-pink-500 outline-none">
+                <input type="file" id="file-snd-tiktok_gift_lion" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('tiktok_gift_lion', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-tiktok_gift_lion').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('tiktok_gift_lion')"
+                  class="py-1.5 px-2.5 rounded-xl bg-pink-950/60 hover:bg-pink-900/80 text-pink-300 border border-pink-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('tiktok_gift_lion', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-tiktok_gift_lion" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 9. Twitch Follow -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-purple-500/20 hover:border-purple-500/40 transition space-y-3" data-platform="twitch">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-purple-400 flex items-center gap-2">
+                <span>🟣</span> Twitch - Nuevo Seguidor (Follow)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">twitch • follow</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-twitch_follow" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-twitch_follow" placeholder="URL o sube un archivo..." oninput="updateImagePreview('twitch_follow', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-twitch_follow" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('twitch_follow', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-twitch_follow').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('twitch_follow', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-twitch_follow" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('twitch_follow', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                <input type="file" id="file-snd-twitch_follow" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('twitch_follow', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-twitch_follow').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('twitch_follow')"
+                  class="py-1.5 px-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('twitch_follow', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-twitch_follow" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 10. Twitch Sub -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-purple-500/20 hover:border-purple-500/40 transition space-y-3" data-platform="twitch">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-purple-400 flex items-center gap-2">
+                <span>⭐</span> Twitch - Suscripción Prime / Tier 1
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">twitch • sub</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-twitch_sub" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-twitch_sub" placeholder="URL o sube un archivo..." oninput="updateImagePreview('twitch_sub', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-twitch_sub" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('twitch_sub', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-twitch_sub').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('twitch_sub', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-twitch_sub" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('twitch_sub', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                <input type="file" id="file-snd-twitch_sub" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('twitch_sub', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-twitch_sub').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('twitch_sub')"
+                  class="py-1.5 px-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('twitch_sub', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-twitch_sub" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 11. Twitch Host -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-purple-500/20 hover:border-purple-500/40 transition space-y-3" data-platform="twitch">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-purple-400 flex items-center gap-2">
+                <span>📡</span> Twitch - Host del Canal (25)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">twitch • host</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-twitch_host" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-twitch_host" placeholder="URL o sube un archivo..." oninput="updateImagePreview('twitch_host', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-twitch_host" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('twitch_host', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-twitch_host').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('twitch_host', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-twitch_host" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('twitch_host', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                <input type="file" id="file-snd-twitch_host" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('twitch_host', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-twitch_host').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('twitch_host')"
+                  class="py-1.5 px-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('twitch_host', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-twitch_host" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 12. Twitch Raid -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-purple-500/20 hover:border-purple-500/40 transition space-y-3" data-platform="twitch">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-purple-400 flex items-center gap-2">
+                <span>🚀</span> Twitch - Raid de Comunidad (42)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">twitch • raid</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-twitch_raid" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-twitch_raid" placeholder="URL o sube un archivo..." oninput="updateImagePreview('twitch_raid', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-twitch_raid" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('twitch_raid', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-twitch_raid').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('twitch_raid', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-twitch_raid" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('twitch_raid', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-purple-500 outline-none">
+                <input type="file" id="file-snd-twitch_raid" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('twitch_raid', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-twitch_raid').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('twitch_raid')"
+                  class="py-1.5 px-2.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('twitch_raid', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-twitch_raid" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 13. YouTube Sub -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-red-500/20 hover:border-red-500/40 transition space-y-3" data-platform="youtube">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-red-400 flex items-center gap-2">
+                <span>🔴</span> YouTube - Nuevo Suscriptor (Sub)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">youtube • sub</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-youtube_sub" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-youtube_sub" placeholder="URL o sube un archivo..." oninput="updateImagePreview('youtube_sub', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-youtube_sub" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('youtube_sub', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-youtube_sub').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('youtube_sub', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-youtube_sub" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('youtube_sub', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                <input type="file" id="file-snd-youtube_sub" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('youtube_sub', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-youtube_sub').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('youtube_sub')"
+                  class="py-1.5 px-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('youtube_sub', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-youtube_sub" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 14. YouTube Member -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-red-500/20 hover:border-red-500/40 transition space-y-3" data-platform="youtube">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-red-400 flex items-center gap-2">
+                <span>⭐</span> YouTube - Nuevo Miembro (Membresía)
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">youtube • member</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-youtube_member" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-youtube_member" placeholder="URL o sube un archivo..." oninput="updateImagePreview('youtube_member', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-youtube_member" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('youtube_member', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-youtube_member').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('youtube_member', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-youtube_member" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('youtube_member', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                <input type="file" id="file-snd-youtube_member" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('youtube_member', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-youtube_member').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('youtube_member')"
+                  class="py-1.5 px-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('youtube_member', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-youtube_member" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+          <!-- 15. YouTube Super Chat -->
+          <div class="custom-event-card p-4 rounded-2xl bg-black/40 border border-red-500/20 hover:border-red-500/40 transition space-y-3" data-platform="youtube">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-red-400 flex items-center gap-2">
+                <span>💰</span> YouTube - Super Chat / Sticker
+              </span>
+              <span class="text-[10px] text-gray-500 uppercase font-mono">youtube • superchat</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-[11px] font-semibold text-gray-300 block">🖼️ Imagen o GIF Animado:</label>
+              <div class="flex items-center gap-2">
+                <div id="media-preview-youtube_superchat" class="w-12 h-12 rounded-xl bg-gray-900 border border-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <span class="text-gray-600 text-xs">Sin GIF</span>
+                </div>
+                <div class="flex-1 space-y-1">
+                  <input type="text" id="media-img-youtube_superchat" placeholder="URL o sube un archivo..." oninput="updateImagePreview('youtube_superchat', this.value)" onchange="saveAlertCustomization(false)"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                  <div class="flex items-center gap-2">
+                    <input type="file" id="file-img-youtube_superchat" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden" onchange="uploadMediaFile('youtube_superchat', 'image', this)">
+                    <button type="button" onclick="document.getElementById('file-img-youtube_superchat').click()"
+                      class="py-1 px-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                      <span>📁</span> Subir Imagen/GIF
+                    </button>
+                    <button type="button" onclick="clearMedia('youtube_superchat', 'image')"
+                      class="py-1 px-2 rounded-lg bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition">
+                      ✕ Quitar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-2 border-t border-gray-800/80">
+              <label class="text-[11px] font-semibold text-gray-300 block">🎵 Sonido de Alerta:</label>
+              <div class="flex items-center gap-2">
+                <input type="text" id="media-snd-youtube_superchat" placeholder="URL de audio o sube MP3/WAV..." oninput="updateSoundBadge('youtube_superchat', this.value)" onchange="saveAlertCustomization(false)"
+                  class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:border-red-500 outline-none">
+                <input type="file" id="file-snd-youtube_superchat" accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg" class="hidden" onchange="uploadMediaFile('youtube_superchat', 'audio', this)">
+                <button type="button" onclick="document.getElementById('file-snd-youtube_superchat').click()"
+                  class="py-1.5 px-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-medium border border-gray-700 transition flex items-center gap-1">
+                  <span>📁</span> Subir MP3
+                </button>
+                <button type="button" onclick="playSoundPreview('youtube_superchat')"
+                  class="py-1.5 px-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-500/30 text-[11px] font-bold transition flex items-center gap-1 active:scale-95">
+                  <span>▶</span> Probar
+                </button>
+                <button type="button" onclick="clearMedia('youtube_superchat', 'audio')"
+                  class="py-1.5 px-2 rounded-xl bg-gray-900 hover:bg-rose-950/60 text-gray-400 hover:text-rose-300 text-[11px] border border-gray-800 transition" title="Restablecer campana">
+                  ✕
+                </button>
+              </div>
+              <div id="sound-badge-youtube_superchat" class="text-[10px] text-gray-500 font-mono">🔔 Sonido predeterminado (campana)</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: EDITOR AVANZADO DE CÓDIGO (HTML / CSS / JS) -->
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800/80 pb-3">
+          <div>
+            <h2 class="text-base font-bold font-outfit uppercase tracking-wider text-gray-200 flex items-center gap-2">
+              <span class="text-indigo-400">●</span> Editor Avanzado de Código (HTML / CSS / JS)
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Personaliza el diseño con hojas de estilo CSS, estructura HTML o animaciones JavaScript para OBS.
+            </p>
+          </div>
+          <button onclick="saveAlertCustomization()"
+            class="py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-950/50 transition active:scale-95 flex items-center gap-2 self-start sm:self-auto">
+            <span>💾</span> Guardar Todo
+          </button>
+        </div>
+
+        <!-- Pestañas del Editor de Código -->
+        <div class="flex border-b border-gray-800 gap-1 text-xs">
+          <button id="code-tab-btn-css" onclick="switchCodeTab('css')"
+            class="code-tab-btn py-2 px-4 font-bold border-b-2 border-emerald-400 text-emerald-300 transition flex items-center gap-1.5">
+            <span>🎨</span> CSS Personalizado
+          </button>
+          <button id="code-tab-btn-html" onclick="switchCodeTab('html')"
+            class="code-tab-btn py-2 px-4 font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition flex items-center gap-1.5">
+            <span>📄</span> Plantilla HTML
+          </button>
+          <button id="code-tab-btn-js" onclick="switchCodeTab('js')"
+            class="code-tab-btn py-2 px-4 font-bold border-b-2 border-transparent text-gray-400 hover:text-white transition flex items-center gap-1.5">
+            <span>⚡</span> JavaScript
+          </button>
+        </div>
+
+        <!-- Panel 1: CSS -->
+        <div id="code-panel-css" class="code-panel space-y-2">
+          <div class="flex items-center justify-between text-[11px] text-gray-400">
+            <span>Clases principales: <code class="text-emerald-400 bg-gray-900 px-1 py-0.5 rounded">#alert-box</code>, <code class="text-emerald-400 bg-gray-900 px-1 py-0.5 rounded">.alert-user</code>, <code class="text-emerald-400 bg-gray-900 px-1 py-0.5 rounded">.alert-detail</code>, <code class="text-emerald-400 bg-gray-900 px-1 py-0.5 rounded">.alert-custom-image</code></span>
+            <button type="button" onclick="loadSampleCss()" class="text-emerald-400 hover:underline">
+              Insertar ejemplo CSS
+            </button>
+          </div>
+          <textarea id="custom-css-editor" rows="7" placeholder="/* Escribe tus reglas CSS personalizadas aquí */&#10;#alert-box {&#10;  border: 2px solid #53fc18;&#10;  border-radius: 20px;&#10;  box-shadow: 0 0 25px rgba(83, 252, 24, 0.4);&#10;}"
+            class="w-full bg-gray-950 font-mono text-xs text-emerald-300 p-3.5 rounded-xl border border-gray-800 focus:border-emerald-500 outline-none resize-y custom-scrollbar"></textarea>
+        </div>
+
+        <!-- Panel 2: HTML -->
+        <div id="code-panel-html" class="code-panel hidden space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-gray-400">
+            <span class="flex items-center gap-1 flex-wrap">
+              Etiquetas disponibles:
+              <button type="button" onclick="insertTag('{user}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{user}</button>
+              <button type="button" onclick="insertTag('{platform}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{platform}</button>
+              <button type="button" onclick="insertTag('{title}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{title}</button>
+              <button type="button" onclick="insertTag('{detail}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{detail}</button>
+              <button type="button" onclick="insertTag('{media}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{media}</button>
+              <button type="button" onclick="insertTag('{badge}')" class="px-1.5 py-0.5 rounded bg-gray-900 border border-gray-700 text-sky-300 font-mono hover:bg-gray-800">{badge}</button>
+            </span>
+            <button type="button" onclick="loadSampleHtml()" class="text-sky-400 hover:underline">
+              Cargar estructura por defecto
+            </button>
+          </div>
+          <textarea id="custom-html-editor" rows="7" placeholder="Deja vacío para usar el diseño predeterminado o escribe tu propio HTML con {media}, {user}, {detail}, etc."
+            class="w-full bg-gray-950 font-mono text-xs text-sky-300 p-3.5 rounded-xl border border-gray-800 focus:border-sky-500 outline-none resize-y custom-scrollbar"></textarea>
+        </div>
+
+        <!-- Panel 3: JS -->
+        <div id="code-panel-js" class="code-panel hidden space-y-2">
+          <div class="flex items-center justify-between text-[11px] text-gray-400">
+            <span>Se ejecuta en OBS en cada alerta. Parámetro disponible: <code class="text-amber-400 bg-gray-900 px-1 py-0.5 rounded">alert</code></span>
+            <button type="button" onclick="loadSampleJs()" class="text-amber-400 hover:underline">
+              Insertar ejemplo JS
+            </button>
+          </div>
+          <textarea id="custom-js-editor" rows="7" placeholder="// Código JavaScript personalizado&#10;console.log('Alerta recibida:', alert.platform, alert.user);"
+            class="w-full bg-gray-950 font-mono text-xs text-amber-300 p-3.5 rounded-xl border border-gray-800 focus:border-amber-500 outline-none resize-y custom-scrollbar"></textarea>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const socket = io();
+
+    // Sincronizar dinámicamente URLs con el dominio actual (Render o localhost)
+    function syncObsUrls() {
+      const origin = window.location.origin;
+      const chat = document.getElementById('url-chat');
+      const alerts = document.getElementById('url-alerts');
+      const dock = document.getElementById('url-dock');
+      const events = document.getElementById('url-events');
+      const viewers = document.getElementById('url-viewers');
+      if (chat) chat.value = `${origin}/chat.html`;
+      if (alerts) alerts.value = `${origin}/alerts.html`;
+      if (dock) dock.value = `${origin}/dock.html`;
+      if (events) events.value = `${origin}/events.html`;
+      if (viewers) viewers.value = `${origin}/viewers.html`;
+    }
+    syncObsUrls();
+
+    // Sistema de navegación por pestañas / paneles
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      const targetPanel = document.getElementById(`panel-${tabId}`);
+      const targetBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (targetPanel) targetPanel.classList.remove('hidden');
+      if (targetBtn) targetBtn.classList.add('active');
+
+      try {
+        localStorage.setItem('multichat_tab', tabId);
+      } catch (e) {}
+    }
+
+    // Restaurar última pestaña visitada
+    try {
+      const savedTab = localStorage.getItem('multichat_tab');
+      if (savedTab && document.getElementById(`panel-${savedTab}`)) {
+        switchTab(savedTab);
+      }
+    } catch (e) {}
+
+    // Viewers update
+    socket.on('viewers:update', (data) => {
+      const kEl = document.getElementById('dash-viewers-kick');
+      const tEl = document.getElementById('dash-viewers-tiktok');
+      const twEl = document.getElementById('dash-viewers-twitch');
+      const ytEl = document.getElementById('dash-viewers-youtube');
+      if (kEl && data.kick) {
+        kEl.textContent = `👁️ ${data.kick.viewers.toLocaleString()}`;
+        kEl.style.display = (data.kick.connected || data.kick.isLive || data.kick.viewers > 0) ? 'inline-block' : 'none';
+      }
+      if (tEl && data.tiktok) {
+        tEl.textContent = `👁️ ${data.tiktok.viewers.toLocaleString()}`;
+        tEl.style.display = (data.tiktok.connected || data.tiktok.isLive || data.tiktok.viewers > 0) ? 'inline-block' : 'none';
+      }
+      if (twEl && data.twitch) {
+        twEl.textContent = `👁️ ${data.twitch.viewers.toLocaleString()}`;
+        twEl.style.display = (data.twitch.connected || data.twitch.isLive || data.twitch.viewers > 0) ? 'inline-block' : 'none';
+      }
+      if (ytEl && data.youtube) {
+        ytEl.textContent = `👁️ ${data.youtube.viewers.toLocaleString()}`;
+        ytEl.style.display = (data.youtube.connected || data.youtube.isLive || data.youtube.viewers > 0) ? 'inline-block' : 'none';
+      }
+    });
+
+    // Estados visuales de conexión
+    let latestServerStatus = null;
+    socket.on('status:update', (data) => {
+      latestServerStatus = data;
+      updateKickBadge(data.kick);
+      updateTikTokBadge(data.tiktok);
+      if (data.twitch) updateTwitchBadge(data.twitch);
+      if (data.youtube) updateYouTubeBadge(data.youtube);
+    });
+
+    socket.on('connect', () => {
+      fetch('/api/status').then(r => r.json()).then(data => {
+        if (data) {
+          latestServerStatus = data;
+          updateKickBadge(data.kick);
+          updateTikTokBadge(data.tiktok);
+          if (data.twitch) updateTwitchBadge(data.twitch);
+          if (data.youtube) updateYouTubeBadge(data.youtube);
+        }
+      }).catch(() => {});
+    });
+
+    function updateKickBadge(kick) {
+      if (!kick) return;
+      const dot = document.getElementById('dot-kick');
+      const text = document.getElementById('text-kick');
+      const user = kick.username || (document.getElementById('input-kick')?.value.trim()) || '';
+      if (kick.connected) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-green-400 shadow-lg shadow-green-500/50';
+        text.className = 'text-green-400 font-bold';
+        text.textContent = user ? `@${user} (Conectado)` : 'Conectado';
+      } else if (kick.connecting) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping';
+        text.className = 'text-yellow-400';
+        text.textContent = user ? `@${user} (Conectando...)` : 'Conectando...';
+      } else {
+        if (user) {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-green-900 border border-green-500/50';
+          text.className = 'text-gray-300 font-medium';
+          text.textContent = `@${user} (Offline)`;
+        } else {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+          text.className = 'text-gray-500';
+          text.textContent = 'Sin vincular';
+        }
+      }
+    }
+
+    function updateTikTokBadge(tiktok) {
+      if (!tiktok) return;
+      const dot = document.getElementById('dot-tiktok');
+      const text = document.getElementById('text-tiktok');
+      const user = tiktok.username || (document.getElementById('input-tiktok')?.value.trim()) || '';
+      if (tiktok.connected) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-pink-500 shadow-lg shadow-pink-500/50';
+        text.className = 'text-pink-400 font-bold';
+        text.textContent = user ? `@${user} (En Vivo)` : 'En Vivo';
+      } else if (tiktok.connecting) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping';
+        text.className = 'text-yellow-400';
+        text.textContent = user ? `@${user} (Conectando...)` : 'Conectando...';
+      } else {
+        if (user) {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-pink-900 border border-pink-500/50';
+          text.className = 'text-gray-300 font-medium';
+          text.textContent = `@${user} (Offline)`;
+        } else {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+          text.className = 'text-gray-500';
+          text.textContent = 'Sin vincular';
+        }
+      }
+    }
+
+    function updateTwitchBadge(twitch) {
+      if (!twitch) return;
+      const dot = document.getElementById('dot-twitch');
+      const text = document.getElementById('text-twitch');
+      const user = twitch.username || (document.getElementById('input-twitch')?.value.trim()) || '';
+      if (twitch.connected) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50';
+        text.className = 'text-purple-400 font-bold';
+        text.textContent = user ? `@${user} (Conectado)` : 'Conectado';
+      } else if (twitch.connecting) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping';
+        text.className = 'text-yellow-400';
+        text.textContent = user ? `@${user} (Conectando...)` : 'Conectando...';
+      } else {
+        if (user) {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-purple-900 border border-purple-500/50';
+          text.className = 'text-gray-300 font-medium';
+          text.textContent = `@${user} (Offline)`;
+        } else {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+          text.className = 'text-gray-500';
+          text.textContent = 'Sin vincular';
+        }
+      }
+    }
+
+    function updateYouTubeBadge(youtube) {
+      if (!youtube) return;
+      const dot = document.getElementById('dot-youtube');
+      const text = document.getElementById('text-youtube');
+      const user = youtube.username || (document.getElementById('input-youtube')?.value.trim()) || '';
+      const displayUser = user.startsWith('@') ? user : (user ? `@${user}` : '');
+      if (youtube.connected) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-red-600 shadow-lg shadow-red-500/50';
+        text.className = 'text-red-400 font-bold';
+        text.textContent = displayUser ? `${displayUser} (Monitoreando)` : 'Monitoreando';
+      } else if (youtube.connecting) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping';
+        text.className = 'text-yellow-400';
+        text.textContent = displayUser ? `${displayUser} (Conectando...)` : 'Conectando...';
+      } else {
+        if (displayUser) {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-red-900 border border-red-500/50';
+          text.className = 'text-gray-300 font-medium';
+          text.textContent = `${displayUser} (Desconectado)`;
+        } else {
+          dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+          text.className = 'text-gray-500';
+          text.textContent = 'Sin vincular';
+        }
+      }
+    }
+
+    // Configuración guardada
+    socket.on('config:update', (cfg) => {
+      if (cfg.kickUsername && !document.getElementById('input-kick').value) {
+        document.getElementById('input-kick').value = cfg.kickUsername;
+      }
+      if (cfg.tiktokUsername && !document.getElementById('input-tiktok').value) {
+        document.getElementById('input-tiktok').value = cfg.tiktokUsername;
+      }
+      if (cfg.twitchUsername && !document.getElementById('input-twitch').value) {
+        document.getElementById('input-twitch').value = cfg.twitchUsername;
+      }
+      if (cfg.youtubeChannel && !document.getElementById('input-youtube').value) {
+        document.getElementById('input-youtube').value = cfg.youtubeChannel;
+      }
+      if (cfg.chatTheme) {
+        document.getElementById('setting-theme').value = cfg.chatTheme;
+      }
+      if (cfg.chatFontSize) {
+        document.getElementById('setting-font-size').value = cfg.chatFontSize;
+      }
+      if (cfg.alertVolume !== undefined) {
+        document.getElementById('setting-volume').value = cfg.alertVolume;
+        document.getElementById('vol-val').textContent = `${cfg.alertVolume}%`;
+      }
+      if (cfg.alertDuration !== undefined) {
+        document.getElementById('setting-duration').value = cfg.alertDuration;
+      }
+      if (cfg.chatFadeTimeout !== undefined) {
+        document.getElementById('setting-fade').value = cfg.chatFadeTimeout;
+      }
+    });
+
+    // Monitor de Chat en Vivo
+    const chatMonitor = document.getElementById('live-chat-monitor');
+    const chatMsgCount = document.getElementById('chat-msg-count');
+    let totalChatReceived = 0;
+    let hasChatMessages = false;
+    let currentChatFilter = 'all';
+
+    socket.on('chat:message', (msg) => {
+      if (!hasChatMessages) {
+        chatMonitor.innerHTML = '';
+        hasChatMessages = true;
+      }
+
+      totalChatReceived++;
+      if (chatMsgCount) chatMsgCount.textContent = `${totalChatReceived} mensajes`;
+
+      const row = document.createElement('div');
+      const platformClass = msg.platform || 'kick';
+      row.className = `chat-row flex items-start gap-2 p-1.5 rounded hover:bg-gray-800/40 transition`;
+      row.setAttribute('data-platform', platformClass);
+
+      if (currentChatFilter !== 'all' && currentChatFilter !== platformClass) {
+        row.style.display = 'none';
+      }
+
+      const userColor = msg.color || (platformClass === 'kick' ? '#53fc18' : (platformClass === 'twitch' ? '#bf94ff' : '#00f2fe'));
+      const badgeIcon = platformClass === 'kick' ? '🟢' : (platformClass === 'twitch' ? '🟣' : (platformClass === 'tiktok' ? '💖' : '🔴'));
+
+      const body = document.createElement('div');
+      body.className = 'flex-1 min-w-0 break-words';
+      body.innerHTML = `<span class="inline-block mr-1 text-xs" title="${platformClass}">${badgeIcon}</span><span class="font-bold mr-1" style="color: ${userColor}">${escapeHtml(msg.nickname || msg.user)}:</span> <span class="text-gray-200">${formatChatMessage(msg.message)}</span>`;
+
+      row.appendChild(body);
+      chatMonitor.appendChild(row);
+
+      while (chatMonitor.children.length > 200) {
+        chatMonitor.removeChild(chatMonitor.firstChild);
+      }
+
+      chatMonitor.scrollTop = chatMonitor.scrollHeight;
+    });
+
+    function filterMonitorChat(platform, btn) {
+      currentChatFilter = platform;
+      document.querySelectorAll('.chat-filter-btn').forEach(b => {
+        b.className = 'chat-filter-btn px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition';
+      });
+      btn.className = 'chat-filter-btn px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold transition';
+
+      chatMonitor.querySelectorAll('.chat-row').forEach(row => {
+        const rowPlatform = row.getAttribute('data-platform');
+        row.style.display = (platform === 'all' || rowPlatform === platform) ? 'flex' : 'none';
+      });
+      chatMonitor.scrollTop = chatMonitor.scrollHeight;
+    }
+
+    function formatChatMessage(text) {
+      if (!text) return '';
+      let safe = escapeHtml(text);
+      safe = safe.replace(/\[emote:(\d+):([^\]]+)\]/g, (match, id, name) => {
+        return `<img class="inline-block h-6 w-auto align-middle mx-0.5 object-contain" src="https://files.kick.com/emotes/${id}/fullsize" alt="${name}" title="${name}" loading="lazy">`;
+      });
+      return safe;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    function clearChatMonitor() {
+      chatMonitor.innerHTML = '<div class="text-center text-gray-500 py-24">Monitor limpiado. Esperando nuevos mensajes...</div>';
+      hasChatMessages = false;
+      totalChatReceived = 0;
+      if (chatMsgCount) chatMsgCount.textContent = '0 mensajes';
+    }
+
+    // Monitor de Historial de Alertas
+    const eventsMonitor = document.getElementById('live-events-monitor');
+    let hasAlertEvents = false;
+
+    socket.on('alert:history', (history) => {
+      eventsMonitor.innerHTML = '';
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      const validHistory = (history || []).filter(a => (a.timestamp || 0) >= cutoff);
+      if (validHistory.length === 0) {
+        eventsMonitor.innerHTML = '<div class="text-center text-gray-500 py-20">Aún no hay notificaciones recientes.<br>Las alertas se listarán aquí.</div>';
+        hasAlertEvents = false;
+        return;
+      }
+      hasAlertEvents = true;
+      validHistory.forEach(alert => renderAlertItem(alert, false));
+    });
+
+    socket.on('alert', (alert) => {
+      if (!hasAlertEvents) {
+        eventsMonitor.innerHTML = '';
+        hasAlertEvents = true;
+      }
+      renderAlertItem(alert, true);
+    });
+
+    function renderAlertItem(alert, isPrepend = true) {
+      const row = document.createElement('div');
+      row.className = 'alert-row flex items-center gap-2.5 p-2 rounded-xl bg-gray-900/60 border border-gray-800/80 hover:bg-gray-800/50 transition';
+      row.setAttribute('data-timestamp', alert.timestamp || Date.now());
+
+      let icon = '🔔';
+      if (alert.type === 'follow') icon = alert.platform === 'kick' ? '🟢' : (alert.platform === 'twitch' ? '🟣' : (alert.platform === 'youtube' ? '🔴' : '💖'));
+      else if (alert.type === 'sub' || alert.type === 'subscription') icon = '⭐';
+      else if (alert.type === 'gift') icon = '🎁';
+      else if (alert.type === 'cheer') icon = '💎';
+      else if (alert.type === 'host') icon = '📡';
+      else if (alert.type === 'raid' || alert.type === 'share') icon = '🚀';
+
+      const userColor = alert.platform === 'kick' ? '#53fc18' : (alert.platform === 'twitch' ? '#bf94ff' : (alert.platform === 'youtube' ? '#ff4444' : '#00f2fe'));
+
+      let giftBadge = '';
+      if (alert.gift) {
+        giftBadge = `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-yellow-400/20 text-yellow-300 font-bold">${alert.gift.coins ? alert.gift.coins + ' 🪙' : ''}</span>`;
+      }
+
+      row.innerHTML = `
+        <span class="text-lg flex-shrink-0">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-xs" style="color: ${userColor}">${escapeHtml(alert.user)}</span>
+            <span class="text-[10px] text-gray-500 font-mono">${alert.platform ? alert.platform.toUpperCase() : ''}</span>
+          </div>
+          <div class="text-[11px] text-gray-300 truncate">${escapeHtml(alert.detail || alert.title)}${giftBadge}</div>
+        </div>
+      `;
+
+      if (isPrepend) {
+        eventsMonitor.insertBefore(row, eventsMonitor.firstChild);
+      } else {
+        eventsMonitor.appendChild(row);
+      }
+
+      while (eventsMonitor.children.length > 50) {
+        eventsMonitor.removeChild(eventsMonitor.lastChild);
+      }
+    }
+
+    // Auto-borrado de alertas en panel tras 10 min
+    setInterval(() => {
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      const rows = eventsMonitor.querySelectorAll('.alert-row');
+      rows.forEach(r => {
+        const ts = parseInt(r.getAttribute('data-timestamp') || '0', 10);
+        if (ts && ts < cutoff) r.remove();
+      });
+      if (eventsMonitor.querySelectorAll('.alert-row').length === 0 && hasAlertEvents) {
+        eventsMonitor.innerHTML = '<div class="text-center text-gray-500 py-20">Aún no hay notificaciones recientes.<br>Las alertas se listarán aquí.</div>';
+        hasAlertEvents = false;
+      }
+    }, 10000);
+
+    function clearAlertHistory() {
+      eventsMonitor.innerHTML = '<div class="text-center text-gray-500 py-20">Historial limpiado. Esperando nuevas alertas...</div>';
+      hasAlertEvents = false;
+      fetch('/api/alerts/clear', { method: 'POST' }).catch(() => {});
+    }
+
+    // Conectar streams
+    async function connectStreams() {
+      const kickUsername = document.getElementById('input-kick').value.trim();
+      const tiktokUsername = document.getElementById('input-tiktok').value.trim();
+      const twitchUsername = document.getElementById('input-twitch').value.trim();
+      const youtubeChannel = document.getElementById('input-youtube').value.trim();
+
+      // Guardar en localStorage para que nunca se pierdan si Render se reinicia o apagan directo
+      try {
+        localStorage.setItem('stream_overlay_channels', JSON.stringify({
+          kickUsername,
+          tiktokUsername,
+          twitchUsername,
+          youtubeChannel
+        }));
+      } catch (_) {}
+
+      const btn = document.getElementById('btn-connect');
+      const originalText = btn.textContent;
+      btn.textContent = 'Conectando y guardando...';
+
+      await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kickUsername, tiktokUsername, twitchUsername, youtubeChannel })
+      });
+
+      setTimeout(() => {
+        btn.textContent = originalText;
+        showToast('success', '✅ Canales vinculados y guardados con éxito.');
+      }, 1000);
+    }
+
+    // Pausar conexiones en vivo (mantiene las cuentas vinculadas)
+    async function disconnectStreams() {
+      const btn = document.getElementById('btn-disconnect');
+      const orig = btn ? btn.textContent : '';
+      if (btn) btn.textContent = 'Pausando...';
+      await fetch('/api/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'all' })
+      });
+      setTimeout(() => {
+        if (btn) btn.textContent = orig;
+      }, 800);
+      showToast('info', '⏸️ Conexiones pausadas. Tus cuentas siguen vinculadas y se conectarán al iniciar directo.');
+    }
+
+    // Desvincular y borrar cuentas por completo
+    async function unlinkChannels() {
+      if (!confirm('¿Seguro que deseas desvincular todas tus cuentas de Kick, TikTok, Twitch y YouTube?')) {
+        return;
+      }
+      try { localStorage.removeItem('stream_overlay_channels'); } catch (_) {}
+      if (document.getElementById('input-kick')) document.getElementById('input-kick').value = '';
+      if (document.getElementById('input-tiktok')) document.getElementById('input-tiktok').value = '';
+      if (document.getElementById('input-twitch')) document.getElementById('input-twitch').value = '';
+      if (document.getElementById('input-youtube')) document.getElementById('input-youtube').value = '';
+
+      await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kickUsername: '', tiktokUsername: '', twitchUsername: '', youtubeChannel: '' })
+      });
+      await fetch('/api/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'all' })
+      });
+      showToast('success', '🗑️ Cuentas desvinculadas por completo.');
+    }
+
+    // Actualizar configuración
+    async function updateSettings() {
+      const chatTheme = document.getElementById('setting-theme').value;
+      const chatFontSize = parseInt(document.getElementById('setting-font-size').value, 10);
+      const alertVolume = parseInt(document.getElementById('setting-volume').value, 10);
+      document.getElementById('vol-val').textContent = `${alertVolume}%`;
+      const alertDuration = parseInt(document.getElementById('setting-duration').value, 10);
+      const chatFadeTimeout = parseInt(document.getElementById('setting-fade').value, 10);
+
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatTheme, chatFontSize, alertVolume, alertDuration, chatFadeTimeout })
+      });
+    }
+
+    // Lanzar pruebas de alertas
+    async function sendTestAlert(platform, type) {
+      let payload = { platform, type };
+
+      if (platform === 'kick') {
+        if (type === 'follow') {
+          payload.user = 'KickViewer_' + Math.floor(Math.random() * 900 + 100);
+          payload.title = '¡Nuevo Seguidor en Kick!';
+          payload.detail = 'ahora te sigue en Kick 🟢';
+        } else if (type === 'sub') {
+          payload.user = 'SuperGamerKick';
+          payload.title = '¡Nueva Suscripción en Kick!';
+          payload.detail = 'se ha suscrito al canal (Tier 1)';
+        } else if (type === 'giftsub') {
+          payload.user = 'DonadorPro';
+          payload.title = '¡Suscripciones Regaladas!';
+          payload.detail = 'regaló 5 suscripciones a la comunidad ⭐';
+        } else if (type === 'host') {
+          payload.user = 'KickHostStreamer';
+          payload.title = '¡Host en Kick!';
+          payload.detail = 'te está hosteando con 38 espectadores 📡';
+          payload.viewers = 38;
+        } else if (type === 'raid') {
+          payload.user = 'KickRaidMaster';
+          payload.title = '¡Raid en Kick!';
+          payload.detail = 'llegó con una raid de 54 espectadores 🚀';
+          payload.viewers = 54;
+        }
+      } else if (platform === 'tiktok') {
+        if (type === 'follow') {
+          payload.user = 'TikToker_' + Math.floor(Math.random() * 900 + 100);
+          payload.title = '¡Nuevo Seguidor en TikTok!';
+          payload.detail = 'te ha comenzado a seguir 💖';
+        } else if (type === 'gift-rose') {
+          payload.type = 'gift';
+          payload.user = 'FanNumeroUno';
+          payload.title = '¡Regalo en TikTok!';
+          payload.detail = 'envió Rosa x5 (5 🪙)';
+          payload.gift = {
+            name: 'Rosa',
+            count: 5,
+            coins: 5,
+            icon: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/03126f53ca622c1db441113b29235e1a.png~tplv-obj.png'
+          };
+        } else if (type === 'gift-lion') {
+          payload.type = 'gift';
+          payload.user = 'ElReyDelLive';
+          payload.title = '¡SUPER REGALO EN TIKTOK!';
+          payload.detail = '¡ENVIÓ UN LEÓN! x1 (29,999 🪙) 🔥';
+          payload.gift = {
+            name: 'León',
+            count: 1,
+            coins: 29999,
+            icon: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/03126f53ca622c1db441113b29235e1a.png~tplv-obj.png'
+          };
+        }
+      } else if (platform === 'twitch') {
+        if (type === 'follow') {
+          payload.user = 'TwitchFollower_' + Math.floor(Math.random() * 900 + 100);
+          payload.title = '¡Nuevo Seguidor en Twitch!';
+          payload.detail = 'ahora te sigue en Twitch 🟣';
+        } else if (type === 'sub') {
+          payload.user = 'SuperGamerTwitch';
+          payload.title = '¡Nueva Suscripción en Twitch!';
+          payload.detail = 'se ha suscrito al canal con Prime ⭐';
+        } else if (type === 'host') {
+          payload.user = 'TwitchHostPartner';
+          payload.title = '¡Host en Twitch!';
+          payload.detail = 'te está hosteando con 25 espectadores 📡';
+          payload.viewers = 25;
+        } else if (type === 'raid') {
+          payload.user = 'StreamerAmigo';
+          payload.title = '¡Raid en Twitch!';
+          payload.detail = 'llegó con una raid de 42 espectadores 🚀';
+          payload.viewers = 42;
+        }
+      } else if (platform === 'youtube') {
+        if (type === 'sub') {
+          payload.user = 'YouTubeFan_' + Math.floor(Math.random() * 900 + 100);
+          payload.title = '¡Nuevo Suscriptor en YouTube!';
+          payload.detail = 'se ha suscrito al canal 🔴';
+        } else if (type === 'member') {
+          payload.user = 'MiembroVIP_YT';
+          payload.title = '¡Nuevo Miembro del Canal!';
+          payload.detail = 'se unió a las membresías del canal ⭐';
+        } else if (type === 'superchat') {
+          payload.user = 'SuperChatter_YT';
+          payload.title = '¡Super Chat en YouTube!';
+          payload.detail = 'envió un Super Chat de $10.00 USD 💸';
+        }
+      }
+
+      try {
+        const res = await fetch('/api/test-alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('success', `🔔 <b>Alerta simulada:</b> [${platform.toUpperCase()}] ${escapeHtml(payload.title)}`);
+          if (simulatorSoundEnabled) {
+            playSimulatorAudioPreview(platform, type, payload);
+          }
+        } else {
+          showToast('error', '⚠️ Error al enviar alerta de prueba');
+        }
+      } catch (e) {
+        showToast('error', '⚠️ Error de conexión con el servidor');
+      }
+    }
+
+    async function sendTestChat(platform) {
+      let user = platform === 'kick' ? 'KickModerator' : (platform === 'twitch' ? 'TwitchVIP' : (platform === 'youtube' ? 'YouTubeFan' : 'TikTokVIP'));
+      let message = platform === 'kick' ? '¡Hola a todos! El chat de Kick funcionando perfecto 🟢🔥' : (platform === 'twitch' ? '¡Saludos desde Twitch! Chat activo 🟣🎮' : (platform === 'youtube' ? '¡Saludos desde YouTube Live! Todo activo 🔴⚡' : '¡Saludos al streamer desde TikTok Live! ✨'));
+
+      try {
+        const res = await fetch('/api/test-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, user, message })
+        });
+        if (res.ok) {
+          showToast('success', `💬 <b>Chat simulado:</b> [${platform.toUpperCase()}] ${user}: "${message.substring(0, 32)}..."`);
+        } else {
+          showToast('error', '⚠️ Error al enviar chat de prueba');
+        }
+      } catch (e) {
+        showToast('error', '⚠️ Error de conexión con el servidor');
+      }
+    }
+
+    async function sendTestViewers() {
+      try {
+        const res = await fetch('/api/test-viewers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kick: 152, tiktok: 89, twitch: 64, youtube: 42 })
+        });
+        if (res.ok) {
+          showToast('info', '👥 <b>Espectadores actualizados:</b> Kick: 152 | TikTok: 89 | Twitch: 64 | YT: 42');
+        } else {
+          showToast('error', '⚠️ Error al enviar viewers de prueba');
+        }
+      } catch (e) {
+        showToast('error', '⚠️ Error de conexión con el servidor');
+      }
+    }
+
+    function showToast(type, htmlMessage) {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none';
+        document.body.appendChild(container);
+      }
+
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200 shadow-emerald-950/50' :
+                 type === 'info' ? 'bg-indigo-950/95 border-indigo-500/50 text-indigo-200 shadow-indigo-950/50' :
+                 type === 'warning' ? 'bg-amber-950/95 border-amber-500/50 text-amber-200 shadow-amber-950/50' :
+                 'bg-rose-950/95 border-rose-500/50 text-rose-200 shadow-rose-950/50';
+
+      toast.className = `flex items-center gap-2.5 px-4 py-2.5 rounded-xl border backdrop-blur-md shadow-2xl text-xs font-medium transition-all duration-300 transform translate-y-3 opacity-0 pointer-events-auto ${bg}`;
+      toast.innerHTML = htmlMessage;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-3', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function copyToClipboard(elementId, btn) {
+      const input = document.getElementById(elementId);
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      const originalText = btn.textContent;
+      btn.textContent = '¡Copiado!';
+      btn.classList.add('bg-emerald-600', 'text-white');
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('bg-emerald-600', 'text-white');
+      }, 1500);
+    }
+
+    // ==============================================================
+    // PERSONALIZACIÓN DE ALERTAS: MEDIOS Y CÓDIGO (HTML / CSS / JS)
+    // ==============================================================
+
+    function switchCodeTab(tab) {
+      document.querySelectorAll('.code-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.code-tab-btn').forEach(b => {
+        b.classList.remove('border-emerald-400', 'border-sky-400', 'border-amber-400', 'text-emerald-300', 'text-sky-300', 'text-amber-300');
+        b.classList.add('border-transparent', 'text-gray-400');
+      });
+
+      const activePanel = document.getElementById(`code-panel-${tab}`);
+      const activeBtn = document.getElementById(`code-tab-btn-${tab}`);
+      if (activePanel) activePanel.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-gray-400');
+        if (tab === 'css') activeBtn.classList.add('border-emerald-400', 'text-emerald-300');
+        else if (tab === 'html') activeBtn.classList.add('border-sky-400', 'text-sky-300');
+        else if (tab === 'js') activeBtn.classList.add('border-amber-400', 'text-amber-300');
+      }
+    }
+
+    function updateImagePreview(type, url) {
+      const preview = document.getElementById(`media-preview-${type}`);
+      if (!preview) return;
+      if (url && url.trim()) {
+        preview.innerHTML = `<img src="${url.trim()}" class="w-full h-full object-contain p-0.5" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\\'text-rose-400 text-[10px]\\'>Error img</span>';">`;
+      } else {
+        preview.innerHTML = '<span class="text-gray-600 text-xs">Sin GIF</span>';
+      }
+    }
+
+    let simulatorSoundEnabled = true;
+    function toggleSimulatorSound() {
+      simulatorSoundEnabled = !simulatorSoundEnabled;
+      const btn = document.getElementById('btn-sim-sound');
+      if (btn) {
+        btn.textContent = simulatorSoundEnabled ? '🔊 Audio en Panel: ON' : '🔇 Audio en Panel: OFF';
+        btn.className = simulatorSoundEnabled
+          ? 'py-1 px-2.5 rounded-lg bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95'
+          : 'py-1 px-2.5 rounded-lg bg-gray-800 text-gray-400 border border-gray-700 text-[11px] font-bold transition flex items-center gap-1.5 active:scale-95';
+      }
+      showToast('info', simulatorSoundEnabled ? '🔊 Audio en panel activado para pruebas' : '🔇 Audio en panel silenciado');
+    }
+
+    function updateSoundBadge(type, val, optName = '') {
+      const badge = document.getElementById(`sound-badge-${type}`);
+      if (!badge) return;
+      const v = (val || '').trim();
+      if (!v) {
+        badge.innerHTML = `<span class="text-gray-500">🔔 Sonido predeterminado (campana)</span>`;
+      } else if (v.startsWith('data:audio')) {
+        const displayName = optName || 'Audio integrado listo';
+        badge.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1">✅ 🎵 ${escapeHtml(displayName)} (Guardado permanente)</span>`;
+      } else {
+        const previewUrl = v.length > 40 ? v.substring(0, 37) + '...' : v;
+        badge.innerHTML = `<span class="text-sky-400 font-semibold flex items-center gap-1">✅ 🌐 ${escapeHtml(previewUrl)}</span>`;
+      }
+    }
+
+    function clearMedia(type, kind) {
+      if (kind === 'image') {
+        const input = document.getElementById(`media-img-${type}`);
+        if (input) input.value = '';
+        updateImagePreview(type, '');
+        showToast('info', `🖼️ Imagen de [${type.toUpperCase()}] eliminada`);
+      } else if (kind === 'audio') {
+        const input = document.getElementById(`media-snd-${type}`);
+        if (input) input.value = '';
+        updateSoundBadge(type, '');
+        showToast('info', `🎵 Sonido de [${type.toUpperCase()}] restablecido a campana`);
+      }
+      saveAlertCustomization(false);
+    }
+
+    async function uploadMediaFile(type, mediaKind, fileInput) {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      const validExts = mediaKind === 'image'
+        ? /\.(png|jpe?g|gif|webp)$/i
+        : /\.(mp3|wav|ogg|m4a|aac)$/i;
+
+      if (!file.name.match(validExts)) {
+        showToast('error', `⚠️ Formato inválido. Usa ${mediaKind === 'image' ? 'PNG, JPG, GIF o WEBP' : 'MP3, WAV, OGG o M4A'}.`);
+        fileInput.value = '';
+        return;
+      }
+
+      if (file.size > 25 * 1024 * 1024) {
+        showToast('error', '⚠️ El archivo no debe superar 25 MB.');
+        fileInput.value = '';
+        return;
+      }
+
+      showToast('info', `⏳ Subiendo archivo: ${file.name}...`);
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const fileDataUrl = e.target.result;
+          const isAudio = mediaKind === 'audio';
+
+          // Para audios <= 3MB usamos el DataURL directamente para inmunidad total a reinicios de Render
+          let directSoundUrl = '';
+          if (isAudio && file.size <= 3 * 1024 * 1024) {
+            directSoundUrl = fileDataUrl;
+          }
+
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: file.name,
+              data: fileDataUrl,
+              type: `${type}-${mediaKind}`
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            if (mediaKind === 'image') {
+              const inputEl = document.getElementById(`media-img-${type}`);
+              if (inputEl) inputEl.value = data.url;
+              updateImagePreview(type, data.url);
+            } else {
+              const inputEl = document.getElementById(`media-snd-${type}`);
+              const chosenAudio = directSoundUrl || data.url;
+              if (inputEl) {
+                inputEl.value = chosenAudio;
+                updateSoundBadge(type, chosenAudio, file.name);
+              }
+            }
+            showToast('success', `✅ ${mediaKind === 'image' ? 'Imagen/GIF' : 'Audio'} subido y configurado.`);
+            saveAlertCustomization(false);
+          } else {
+            showToast('error', `⚠️ Error al subir: ${data.error || 'Desconocido'}`);
+          }
+        } catch (err) {
+          showToast('error', '⚠️ Error de conexión al subir el archivo.');
+        } finally {
+          fileInput.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    let currentAuditionAudio = null;
+    function playSoundPreview(type) {
+      const inputEl = document.getElementById(`media-snd-${type}`);
+      const soundUrl = inputEl ? inputEl.value.trim() : '';
+
+      if (currentAuditionAudio) {
+        try { currentAuditionAudio.pause(); } catch (e) {}
+        currentAuditionAudio = null;
+      }
+
+      if (!soundUrl) {
+        playSynthChime();
+        showToast('info', `🔔 Sonido por defecto (campana) para [${type.toUpperCase()}]`);
+        return;
+      }
+
+      try {
+        const vol = parseInt(document.getElementById('setting-volume').value, 10) || 80;
+        const audio = new Audio(soundUrl);
+        audio.volume = Math.max(0, Math.min(1, vol / 100));
+        currentAuditionAudio = audio;
+        const p = audio.play();
+        if (p !== undefined) {
+          p.then(() => {
+            showToast('info', `🎵 Reproduciendo sonido asignado a [${type.toUpperCase()}]`);
+          }).catch(err => {
+            console.warn('[Audition Error]:', err.message, soundUrl);
+            showToast('error', `⚠️ No se pudo reproducir: ${err.message}. Usa 'Subir MP3' para asegurar compatibilidad.`);
+          });
+        }
+      } catch (err) {
+        showToast('error', '⚠️ Formato de audio inválido.');
+      }
+    }
+
+    function playSimulatorAudioPreview(platform, type, payload) {
+      let specificKey = '';
+      if (platform === 'tiktok') {
+        if (type === 'follow') specificKey = 'tiktok_follow';
+        else if (payload.gift && payload.gift.name && payload.gift.name.toLowerCase().includes('le')) specificKey = 'tiktok_gift_lion';
+        else if (payload.gift && payload.gift.name && payload.gift.name.toLowerCase().includes('ros')) specificKey = 'tiktok_gift_rose';
+        else if (type === 'gift-lion') specificKey = 'tiktok_gift_lion';
+        else if (type === 'gift-rose') specificKey = 'tiktok_gift_rose';
+        else specificKey = 'tiktok_gift_rose';
+      } else if (platform === 'kick') {
+        if (type === 'follow') specificKey = 'kick_follow';
+        else if (type === 'sub') specificKey = 'kick_sub';
+        else if (type === 'giftsub') specificKey = 'kick_giftsub';
+        else if (type === 'host') specificKey = 'kick_host';
+        else if (type === 'raid') specificKey = 'kick_raid';
+      } else if (platform === 'twitch') {
+        if (type === 'follow') specificKey = 'twitch_follow';
+        else if (type === 'sub') specificKey = 'twitch_sub';
+        else if (type === 'host') specificKey = 'twitch_host';
+        else if (type === 'raid') specificKey = 'twitch_raid';
+      } else if (platform === 'youtube') {
+        if (type === 'sub') specificKey = 'youtube_sub';
+        else if (type === 'member') specificKey = 'youtube_member';
+        else if (type === 'superchat') specificKey = 'youtube_superchat';
+      }
+
+      const input = document.getElementById(`media-snd-${specificKey}`);
+      const soundUrl = input ? input.value.trim() : '';
+      const vol = parseInt(document.getElementById('setting-volume')?.value || 80, 10);
+
+      if (soundUrl) {
+        const audioEl = document.getElementById('panel-simulator-audio');
+        if (audioEl) {
+          audioEl.pause();
+          audioEl.currentTime = 0;
+          audioEl.volume = Math.max(0, Math.min(1, vol / 100));
+          audioEl.src = soundUrl;
+          const p = audioEl.play();
+          if (p !== undefined) {
+            p.catch(err => {
+              console.warn('[Simulator Audio Error]:', err.message);
+              playSynthChime();
+            });
+          }
+        } else {
+          playSoundPreview(specificKey);
+        }
+      } else {
+        playSynthChime();
+      }
+    }
+
+    function playSynthChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        const now = ctx.currentTime;
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+          gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.2, now + idx * 0.09 + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.45);
+        });
+      } catch (e) {}
+    }
+
+    function insertTag(tag) {
+      const editor = document.getElementById('custom-html-editor');
+      if (!editor) return;
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = editor.value;
+      editor.value = text.substring(0, start) + tag + text.substring(end);
+      editor.focus();
+      editor.selectionStart = editor.selectionEnd = start + tag.length;
+    }
+
+    function loadSampleCss() {
+      const editor = document.getElementById('custom-css-editor');
+      if (!editor) return;
+      editor.value = `/* Efecto Neón y Bordes Futuristas para Alertas */
+#alert-box {
+  background: rgba(10, 15, 25, 0.9) !important;
+  border: 2px solid #53fc18 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 0 35px rgba(83, 252, 24, 0.45), inset 0 0 15px rgba(83, 252, 24, 0.2) !important;
+  padding: 24px 36px !important;
+}
+
+.alert-user {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  text-shadow: 0 0 16px currentColor !important;
+}
+
+.alert-detail {
+  font-size: 19px !important;
+  color: #e2e8f0 !important;
+}`;
+      showToast('info', '🎨 Ejemplo CSS insertado. Recuerda hacer clic en Guardar.');
+    }
+
+    function loadSampleHtml() {
+      const editor = document.getElementById('custom-html-editor');
+      if (!editor) return;
+      editor.value = `<div id="alert-media" class="alert-media">{media}</div>
+<div id="alert-user" class="alert-user">{user}</div>
+<div id="alert-detail" class="alert-detail">{detail}</div>
+{badge}`;
+      showToast('info', '📄 Estructura HTML predeterminada insertada.');
+    }
+
+    function loadSampleJs() {
+      const editor = document.getElementById('custom-js-editor');
+      if (!editor) return;
+      editor.value = `// Se ejecuta en OBS en cada alerta
+console.log('⚡ [ALERTA OBS RECIBIDA]:', alert.platform, alert.type, alert.user);
+
+// Ejemplo: si es un regalo, puedes vibrar o agregar una clase temporal
+if (alert.gift) {
+  document.getElementById('alert-box')?.classList.add('pulse-alert');
+}`;
+      showToast('info', '⚡ Ejemplo de JavaScript insertado.');
+    }
+
+    const ALL_EVENT_KEYS = [
+      'kick_follow', 'kick_sub', 'kick_giftsub', 'kick_host', 'kick_raid',
+      'tiktok_follow', 'tiktok_gift_rose', 'tiktok_gift_lion',
+      'twitch_follow', 'twitch_sub', 'twitch_host', 'twitch_raid',
+      'youtube_sub', 'youtube_member', 'youtube_superchat'
+    ];
+
+    function filterCustomEvents(platform) {
+      document.querySelectorAll('.custom-event-card').forEach(card => {
+        if (platform === 'all' || card.getAttribute('data-platform') === platform) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      document.querySelectorAll('.custom-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-gray-700', 'text-white', 'border-gray-500');
+        btn.classList.add('bg-gray-900', 'text-gray-400');
+      });
+      const activeBtn = document.getElementById(`filter-btn-${platform}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-gray-900', 'text-gray-400');
+        activeBtn.classList.add('bg-gray-700', 'text-white', 'border-gray-500');
+      }
+    }
+
+    async function saveAlertCustomization(notify = true) {
+      const alertMedia = {};
+      ALL_EVENT_KEYS.forEach(k => {
+        alertMedia[k] = {
+          image: document.getElementById(`media-img-${k}`)?.value.trim() || '',
+          sound: document.getElementById(`media-snd-${k}`)?.value.trim() || ''
+        };
+      });
+
+      // Fallbacks genéricos
+      alertMedia.follow = alertMedia.kick_follow?.image || alertMedia.kick_follow?.sound ? alertMedia.kick_follow : (alertMedia.twitch_follow?.image ? alertMedia.twitch_follow : (alertMedia.youtube_sub?.image ? alertMedia.youtube_sub : alertMedia.tiktok_follow));
+      alertMedia.sub = alertMedia.kick_sub?.image || alertMedia.kick_sub?.sound ? alertMedia.kick_sub : (alertMedia.twitch_sub?.image ? alertMedia.twitch_sub : alertMedia.youtube_sub);
+      alertMedia.gift = alertMedia.tiktok_gift_rose?.image || alertMedia.tiktok_gift_rose?.sound ? alertMedia.tiktok_gift_rose : alertMedia.tiktok_gift_lion;
+      alertMedia.host = alertMedia.kick_host?.image || alertMedia.kick_host?.sound ? alertMedia.kick_host : alertMedia.twitch_host;
+      alertMedia.raid = alertMedia.kick_raid?.image || alertMedia.kick_raid?.sound ? alertMedia.kick_raid : alertMedia.twitch_raid;
+
+      const customCss = document.getElementById('custom-css-editor')?.value || '';
+      const customHtml = document.getElementById('custom-html-editor')?.value || '';
+      const customJs = document.getElementById('custom-js-editor')?.value || '';
+
+      const chatTheme = document.getElementById('setting-theme')?.value || 'transparent';
+      const chatFontSize = parseInt(document.getElementById('setting-font-size')?.value || 16, 10);
+      const alertVolume = parseInt(document.getElementById('setting-volume')?.value || 80, 10);
+      const alertDuration = parseInt(document.getElementById('setting-duration')?.value || 5, 10);
+      const chatFadeTimeout = parseInt(document.getElementById('setting-fade')?.value || 0, 10);
+
+      // Guardar también en localStorage como salvaguarda permanente
+      try {
+        localStorage.setItem('stream_overlay_customization', JSON.stringify({
+          alertMedia,
+          customCss,
+          customHtml,
+          customJs
+        }));
+      } catch (_) {}
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            alertMedia,
+            customCss,
+            customHtml,
+            customJs,
+            chatTheme,
+            chatFontSize,
+            alertVolume,
+            alertDuration,
+            chatFadeTimeout
+          })
+        });
+        if (res.ok && notify) {
+          showToast('success', '💾 ¡Personalización de los 15 eventos guardada y sincronizada con OBS!');
+        }
+      } catch (e) {
+        if (notify) showToast('error', '⚠️ Error al guardar la personalización.');
+      }
+    }
+
+    // Cargar toda la configuración persistente al abrir el panel
+    async function loadInitialConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (!cfg) return;
+
+        // Ajustes generales
+        if (cfg.chatTheme && document.getElementById('setting-theme')) document.getElementById('setting-theme').value = cfg.chatTheme;
+        if (cfg.chatFontSize && document.getElementById('setting-font-size')) document.getElementById('setting-font-size').value = cfg.chatFontSize;
+        if (cfg.alertVolume !== undefined && document.getElementById('setting-volume')) {
+          document.getElementById('setting-volume').value = cfg.alertVolume;
+          if (document.getElementById('vol-val')) document.getElementById('vol-val').textContent = `${cfg.alertVolume}%`;
+        }
+        if (cfg.alertDuration && document.getElementById('setting-duration')) document.getElementById('setting-duration').value = cfg.alertDuration;
+        if (cfg.chatFadeTimeout !== undefined && document.getElementById('setting-fade')) document.getElementById('setting-fade').value = cfg.chatFadeTimeout;
+
+        // 1. Canales vinculados (inmunes a reinicios de Render o apagado de directo)
+        let localChannels = {};
+        try {
+          localChannels = JSON.parse(localStorage.getItem('stream_overlay_channels') || '{}');
+        } catch (_) {}
+
+        const kickVal = cfg.kickUsername || localChannels.kickUsername || '';
+        const tiktokVal = cfg.tiktokUsername || localChannels.tiktokUsername || '';
+        const twitchVal = cfg.twitchUsername || localChannels.twitchUsername || '';
+        const ytVal = cfg.youtubeChannel || localChannels.youtubeChannel || '';
+
+        if (document.getElementById('input-kick')) document.getElementById('input-kick').value = kickVal;
+        if (document.getElementById('input-tiktok')) document.getElementById('input-tiktok').value = tiktokVal;
+        if (document.getElementById('input-twitch')) document.getElementById('input-twitch').value = twitchVal;
+        if (document.getElementById('input-youtube')) document.getElementById('input-youtube').value = ytVal;
+
+        if (kickVal || tiktokVal || twitchVal || ytVal) {
+          try {
+            localStorage.setItem('stream_overlay_channels', JSON.stringify({
+              kickUsername: kickVal,
+              tiktokUsername: tiktokVal,
+              twitchUsername: twitchVal,
+              youtubeChannel: ytVal
+            }));
+          } catch (_) {}
+        }
+
+        // Reflejar las cuentas vinculadas respetando el estado de conexión real en vivo
+        updateKickBadge(latestServerStatus?.kick || { username: kickVal, connected: false });
+        updateTikTokBadge(latestServerStatus?.tiktok || { username: tiktokVal, connected: false });
+        updateTwitchBadge(latestServerStatus?.twitch || { username: twitchVal, connected: false });
+        updateYouTubeBadge(latestServerStatus?.youtube || { username: ytVal, connected: false });
+
+        // Si el servidor en Render despertó de suspensión (está vacío pero el navegador tiene las cuentas)
+        const serverIsEmpty = !cfg.kickUsername && !cfg.tiktokUsername && !cfg.twitchUsername && !cfg.youtubeChannel;
+        const hasSavedChannels = Boolean(kickVal || tiktokVal || twitchVal || ytVal);
+
+        if (serverIsEmpty && hasSavedChannels) {
+          console.log('[Auto-Restore] Servidor reiniciado. Re-vinculando canales automáticamente...');
+          fetch('/api/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              kickUsername: kickVal,
+              tiktokUsername: tiktokVal,
+              twitchUsername: twitchVal,
+              youtubeChannel: ytVal
+            })
+          }).then(() => {
+            showToast('info', '🔄 Cuentas vinculadas restauradas automáticamente.');
+          }).catch(() => {});
+        }
+
+        // 2. Medios por evento (15 eventos del simulador con salvaguarda en localStorage)
+        let localCust = {};
+        try { localCust = JSON.parse(localStorage.getItem('stream_overlay_customization') || '{}'); } catch (_) {}
+
+        const activeAlertMedia = (cfg.alertMedia && Object.keys(cfg.alertMedia).length > 0) ? cfg.alertMedia : (localCust.alertMedia || {});
+
+        if (activeAlertMedia) {
+          ALL_EVENT_KEYS.forEach(type => {
+            const m = activeAlertMedia[type];
+            if (m) {
+              const imgInput = document.getElementById(`media-img-${type}`);
+              const sndInput = document.getElementById(`media-snd-${type}`);
+              if (imgInput && m.image) {
+                imgInput.value = m.image;
+                updateImagePreview(type, m.image);
+              }
+              if (sndInput) {
+                sndInput.value = m.sound || '';
+                updateSoundBadge(type, m.sound || '');
+              }
+            } else {
+              updateSoundBadge(type, '');
+            }
+          });
+        }
+
+        // 3. Editores de código
+        const activeCss = cfg.customCss !== undefined ? cfg.customCss : (localCust.customCss || '');
+        const activeHtml = cfg.customHtml !== undefined ? cfg.customHtml : (localCust.customHtml || '');
+        const activeJs = cfg.customJs !== undefined ? cfg.customJs : (localCust.customJs || '');
+
+        if (activeCss && document.getElementById('custom-css-editor')) {
+          document.getElementById('custom-css-editor').value = activeCss;
+        }
+        if (activeHtml && document.getElementById('custom-html-editor')) {
+          document.getElementById('custom-html-editor').value = activeHtml;
+        }
+        if (activeJs && document.getElementById('custom-js-editor')) {
+          document.getElementById('custom-js-editor').value = activeJs;
+        }
+
+        if ((!cfg.customCss && activeCss) || (!cfg.customHtml && activeHtml) || (!cfg.customJs && activeJs)) {
+          saveAlertCustomization(false);
+        }
+      } catch (err) {
+        console.error('Error al cargar config inicial:', err);
+      }
+    }
+
+    loadInitialConfig();
+
+    // Keep-Alive para evitar que Render suspenda el servicio mientras el panel esté abierto
+    setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 3 * 60 * 1000);
+
+  </script>
+  <audio id="panel-simulator-audio" preload="auto" style="display:none;"></audio>
+</body>
+</html>

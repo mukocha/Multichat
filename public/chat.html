@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>MultiChat - Overlay Transparente</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: transparent;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    #chat-container {
+      width: 100%;
+      max-height: 100vh;
+      overflow-y: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10px;
+      gap: 2px;
+    }
+
+    /* Línea de chat simple y minimalista */
+    .chat-line {
+      display: block;
+      width: fit-content;
+      max-width: 98%;
+      word-break: break-word;
+      line-height: 1.35;
+      font-size: 16px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      animation: messageEnter 0.2s ease-out forwards;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    @keyframes messageEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chat-line.fade-out {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
+    /* Estilos de Fondo */
+    body.theme-transparent .chat-line {
+      background: transparent;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+    }
+
+    body.theme-glass .chat-line {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    body.theme-solid .chat-line {
+      background: #11141c;
+      border: 1px solid #232734;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    body.theme-solid .chat-line.platform-kick {
+      border-left: 3px solid #53fc18;
+    }
+    body.theme-solid .chat-line.platform-tiktok {
+      border-left: 3px solid #ff0050;
+    }
+    body.theme-solid .chat-line.platform-twitch {
+      border-left: 3px solid #9146ff;
+    }
+    body.theme-solid .chat-line.platform-youtube {
+      border-left: 3px solid #ff0000;
+    }
+
+    /* Nombre de usuario */
+    .username {
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      margin-right: 6px;
+      display: inline;
+    }
+
+    .platform-kick .username {
+      color: #53fc18;
+      text-shadow: 0 0 10px rgba(83, 252, 24, 0.35);
+    }
+
+    .platform-tiktok .username {
+      color: #00f2fe;
+      text-shadow: 0 0 10px rgba(0, 242, 254, 0.35);
+    }
+
+    .platform-twitch .username {
+      color: #bf94ff;
+      text-shadow: 0 0 10px rgba(191, 148, 255, 0.35);
+    }
+
+    .platform-youtube .username {
+      color: #ff4444;
+      text-shadow: 0 0 10px rgba(255, 68, 68, 0.35);
+    }
+
+    /* Insignia mínima de moderador o sub */
+    .badge-sub {
+      font-size: 10px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      margin-right: 4px;
+      font-weight: 600;
+      vertical-align: middle;
+      display: inline-block;
+    }
+
+    /* Badges de Plataforma para el Chat */
+    .badge-platform {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-right: 6px;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
+      user-select: none;
+    }
+    .badge-platform.kick {
+      background: rgba(83, 252, 24, 0.22);
+      color: #53fc18;
+      border: 1px solid rgba(83, 252, 24, 0.6);
+      text-shadow: 0 0 6px rgba(83, 252, 24, 0.4);
+    }
+    .badge-platform.tiktok {
+      background: rgba(255, 0, 80, 0.22);
+      color: #ff0050;
+      border: 1px solid rgba(255, 0, 80, 0.6);
+      text-shadow: 0 0 6px rgba(255, 0, 80, 0.4);
+    }
+    .badge-platform.twitch {
+      background: rgba(145, 70, 255, 0.22);
+      color: #bf94ff;
+      border: 1px solid rgba(145, 70, 255, 0.6);
+      text-shadow: 0 0 6px rgba(145, 70, 255, 0.4);
+    }
+    .badge-platform.youtube {
+      background: rgba(255, 0, 0, 0.22);
+      color: #ff4444;
+      border: 1px solid rgba(255, 0, 0, 0.6);
+      text-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+    }
+
+    /* Texto del mensaje */
+    .message-text {
+      color: #ffffff;
+      font-weight: 500;
+      display: inline;
+    }
+
+    /* Emotes de Kick e imágenes */
+    .chat-emote {
+      height: 1.35em;
+      width: auto;
+      vertical-align: -0.25em;
+      margin: 0 2px;
+      display: inline-block;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body class="theme-transparent">
+
+  <div id="chat-container"></div>
+
+  <script>
+    const socket = io();
+    const container = document.getElementById('chat-container');
+
+    // Parámetros de URL opcionales para OBS: ?fontSize=18&theme=glass|transparent|solid&fade=10
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlFontSize = urlParams.get('fontSize');
+    const urlTheme = urlParams.get('theme');
+    const urlFade = urlParams.get('fade');
+
+    let currentFontSize = urlFontSize ? parseInt(urlFontSize, 10) : 16;
+    let currentTheme = urlTheme || 'transparent'; // 'transparent' por defecto para máxima simpleza
+    let currentFade = urlFade ? parseInt(urlFade, 10) : 0;
+
+    applyStyling();
+
+    function applyStyling() {
+      document.body.className = `theme-${currentTheme}`;
+      document.documentElement.style.setProperty('--chat-font-size', `${currentFontSize}px`);
+      const lines = document.querySelectorAll('.chat-line');
+      lines.forEach(l => l.style.fontSize = `${currentFontSize}px`);
+    }
+
+    // Escuchar cambios de configuración desde el panel web
+    socket.on('config:update', (cfg) => {
+      if (!urlTheme && cfg.chatTheme) currentTheme = cfg.chatTheme;
+      if (!urlFontSize && cfg.chatFontSize) currentFontSize = cfg.chatFontSize;
+      if (!urlFade && cfg.chatFadeTimeout !== undefined) currentFade = cfg.chatFadeTimeout;
+      applyStyling();
+    });
+
+    const seenChatIds = new Set();
+    const recentChatText = new Map();
+
+    socket.on('chat:message', (msg) => {
+      if (!msg) return;
+      if (msg.id && !msg.isTest) {
+        if (seenChatIds.has(msg.id)) return;
+        seenChatIds.add(msg.id);
+        if (seenChatIds.size > 500) {
+          seenChatIds.delete(seenChatIds.values().next().value);
+        }
+      }
+      if (!msg.isTest) {
+        const key = `${msg.platform}:${msg.user || msg.nickname}:${msg.message}`;
+        const now = Date.now();
+        const prev = recentChatText.get(key);
+        if (prev && (now - prev) < 15000) return;
+        recentChatText.set(key, now);
+      }
+      addMessage(msg);
+    });
+
+    function getUserColor(str) {
+      if (!str) return '#38bdf8';
+      const colors = [
+        '#00e5ff', '#38bdf8', '#53fc18', '#a3e635', '#facc15',
+        '#fb923c', '#f87171', '#ff007f', '#ec4899', '#c084fc',
+        '#a855f7', '#818cf8', '#60a5fa', '#2dd4bf', '#34d399'
+      ];
+      let hash = 0;
+      const s = String(str).toLowerCase();
+      for (let i = 0; i < s.length; i++) {
+        hash = s.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    function formatChatMessage(text) {
+      if (!text) return '';
+      let safe = escapeHtml(text);
+      // Reemplazar emotes de Kick [emote:ID:NAME]
+      safe = safe.replace(/\[emote:(\d+):([^\]]+)\]/g, (match, id, name) => {
+        return `<img class="chat-emote" src="https://files.kick.com/emotes/${id}/fullsize" alt="${name}" title="${name}" loading="lazy">`;
+      });
+      return safe;
+    }
+
+    function addMessage(msg) {
+      const line = document.createElement('div');
+      line.className = `chat-line platform-${msg.platform}`;
+      line.style.fontSize = `${currentFontSize}px`;
+
+      const platformClass = msg.platform || 'kick';
+      let platformLabel = 'Kick';
+      if (msg.platform === 'tiktok') platformLabel = 'TikTok';
+      else if (msg.platform === 'twitch') platformLabel = 'Twitch';
+      else if (msg.platform === 'youtube') platformLabel = 'YouTube';
+      const platformBadge = `<span class="badge-platform ${platformClass}">${platformLabel}</span>`;
+
+      // Color de usuario
+      const userColor = msg.color || getUserColor(msg.user || msg.nickname);
+
+      line.innerHTML = `${platformBadge}<span class="username" style="color: ${userColor}">${escapeHtml(msg.nickname || msg.user)}:</span> <span class="message-text">${formatChatMessage(msg.message)}</span>`;
+
+      container.appendChild(line);
+
+      // Limitar a máximo 40 mensajes para evitar uso de memoria
+      while (container.children.length > 40) {
+        container.removeChild(container.firstChild);
+      }
+
+      // Auto-ocultar mensaje si está configurado
+      if (currentFade > 0) {
+        setTimeout(() => {
+          line.classList.add('fade-out');
+          setTimeout(() => {
+            if (line.parentNode) line.parentNode.removeChild(line);
+          }, 450);
+        }, currentFade * 1000);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    // Keep-Alive para mantener Render activo mientras OBS tenga la fuente abierta
+    setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 3 * 60 * 1000);
+  </script>
+</body>
+</html>

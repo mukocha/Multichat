@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>MultiChat - Feed de Notificaciones OBS</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      background-color: #121316 !important;
+      background: #121316 !important;
+      color: #f1f5f9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Barra superior de controles de notificaciones */
+    .events-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #181a20;
+      border-bottom: 1px solid #232730;
+      padding: 5px 10px;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .events-title {
+      font-weight: 700;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .events-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .events-btn {
+      background: #232732;
+      border: 1px solid #333947;
+      color: #cbd5e1;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .events-btn:hover {
+      background: #2d3342;
+      color: #fff;
+    }
+    .events-btn.active {
+      color: #53fc18;
+      border-color: rgba(83, 252, 24, 0.4);
+    }
+
+    /* Solo transparente si se pide expresamente en la URL (?theme=transparent) */
+    html.theme-transparent, body.theme-transparent {
+      background-color: transparent !important;
+      background: transparent !important;
+    }
+    body.theme-transparent .events-topbar {
+      display: none;
+    }
+    body.theme-transparent .event-line {
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 2px 5px rgba(0, 0, 0, 0.95);
+    }
+
+    #events-container {
+      width: 100%;
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    #events-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    #events-container::-webkit-scrollbar-thumb {
+      background: #2d3139;
+      border-radius: 3px;
+    }
+
+    /* Línea de notificación simple, limpia y continua (idéntica al chat) */
+    .event-line {
+      display: block;
+      width: 100%;
+      word-break: break-word;
+      line-height: 1.35;
+      font-size: 13px;
+      padding: 2px 4px;
+      margin: 0;
+      border-radius: 3px;
+      background: transparent;
+      border: none;
+      animation: eventEnter 0.2s ease-out forwards;
+      transition: background 0.1s;
+    }
+    .event-line:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    @keyframes eventEnter {
+      0% { opacity: 0; transform: translateY(4px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    .event-icon {
+      margin-right: 4px;
+      font-size: 14px;
+      vertical-align: middle;
+      display: inline-block;
+    }
+
+    .event-user {
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      margin-right: 4px;
+      display: inline;
+    }
+    .platform-kick .event-user { color: #53fc18; }
+    .platform-tiktok .event-user { color: #00f2fe; }
+    .platform-twitch .event-user { color: #bf94ff; }
+
+    .event-desc {
+      color: #f1f5f9;
+      font-weight: 500;
+      display: inline;
+    }
+
+    .gift-badge {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 0 4px;
+      border-radius: 3px;
+      background: rgba(254, 240, 138, 0.2);
+      color: #fef08a;
+      font-weight: 700;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de estado y sonido para panel de OBS -->
+  <div class="events-topbar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="events-title">🔔 Notificaciones</span>
+    </div>
+    <div class="events-actions">
+      <button id="events-sound-btn" class="events-btn" onclick="toggleSound()" title="Activar/Silenciar sonido en este panel">
+        🔇 Sonido: OFF
+      </button>
+      <button class="events-btn" onclick="testSound()" title="Probar sonido">
+        ▶ Probar
+      </button>
+    </div>
+  </div>
+
+  <div id="events-container"></div>
+
+  <script>
+    const socket = io();
+    const container = document.getElementById('events-container');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlFontSize = urlParams.get('fontSize');
+    const urlTheme = urlParams.get('theme');
+
+    let currentFontSize = urlFontSize ? parseInt(urlFontSize, 10) : 13;
+    const urlSound = urlParams.get('sound');
+    let soundEnabled = urlSound === '1' || urlSound === 'true';
+    let audioCtx = null;
+
+    // Solo activar transparencia si se especifica en la URL
+    if (urlTheme === 'transparent') {
+      document.documentElement.className = 'theme-transparent';
+      document.body.className = 'theme-transparent';
+    }
+
+    applyStyling();
+
+    function applyStyling() {
+      const lines = document.querySelectorAll('.event-line');
+      lines.forEach(l => l.style.fontSize = `${currentFontSize}px`);
+    }
+
+    // Inicializar Web Audio API al hacer clic
+    function initAudio() {
+      try {
+        if (!audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) audioCtx = new AudioCtx();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (err) {
+        console.warn('[Audio] init error:', err);
+      }
+    }
+
+    // Desbloquear audio en el primer clic dentro del panel de OBS
+    document.addEventListener('click', initAudio);
+
+    function playAlertChime(volume = 80) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        const now = audioCtx.currentTime;
+
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+          const gainVal = (volume / 100) * 0.22;
+          gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(gainVal, now + idx * 0.08 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.35);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.4);
+        });
+      } catch (e) {
+        console.warn('[Audio] Error al reproducir chime:', e);
+      }
+    }
+
+    function toggleSound() {
+      initAudio();
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('events-sound-btn');
+      if (btn) {
+        btn.textContent = soundEnabled ? '🔊 Sonido: ON' : '🔇 Sonido: OFF';
+        btn.classList.toggle('active', soundEnabled);
+      }
+      if (soundEnabled) {
+        playAlertChime();
+      }
+    }
+
+    function testSound() {
+      initAudio();
+      playAlertChime();
+    }
+
+    let eventsConfig = { alertMedia: {}, alertSound: true, alertVolume: 80 };
+    fetch('/api/config').then(r => r.json()).then(cfg => { if (cfg) eventsConfig = cfg; }).catch(() => {});
+
+    function getNormalizedType(type) {
+      if (!type) return 'follow';
+      const t = String(type).toLowerCase();
+      if (t === 'follow') return 'follow';
+      if (t === 'sub' || t === 'subscription' || t === 'giftsub') return 'sub';
+      if (t.includes('gift') || t === 'cheer') return 'gift';
+      if (t === 'host') return 'host';
+      if (t === 'raid' || t === 'share') return 'raid';
+      return 'follow';
+    }
+
+    function playCustomEventsAudio(soundUrl, volume = 80) {
+      if (!soundEnabled) return;
+      initAudio();
+      const audioEl = document.getElementById('events-custom-audio');
+      if (!audioEl) {
+        playAlertChime(volume);
+        return;
+      }
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      audioEl.volume = Math.max(0, Math.min(1, volume / 100));
+      audioEl.src = soundUrl;
+      const p = audioEl.play();
+      if (p !== undefined) {
+        p.catch(() => playAlertChime(volume));
+      }
+    }
+
+    function resolveAlertMedia(alert) {
+      if (!eventsConfig.alertMedia) return { sound: '' };
+      const platform = (alert.platform || 'kick').toLowerCase();
+      const type = (alert.type || 'follow').toLowerCase();
+
+      let specificKey = '';
+      if (platform === 'tiktok') {
+        if (type === 'follow') specificKey = 'tiktok_follow';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('le')) specificKey = 'tiktok_gift_lion';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('ros')) specificKey = 'tiktok_gift_rose';
+        else specificKey = 'tiktok_gift_rose';
+      } else if (platform === 'kick') {
+        if (type === 'follow') specificKey = 'kick_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'kick_sub';
+        else if (type === 'giftsub' || type === 'gift-sub' || (alert.title && alert.title.toLowerCase().includes('regalada'))) specificKey = 'kick_giftsub';
+        else if (type === 'host') specificKey = 'kick_host';
+        else if (type === 'raid') specificKey = 'kick_raid';
+      } else if (platform === 'twitch') {
+        if (type === 'follow') specificKey = 'twitch_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'twitch_sub';
+        else if (type === 'host') specificKey = 'twitch_host';
+        else if (type === 'raid') specificKey = 'twitch_raid';
+      } else if (platform === 'youtube') {
+        if (type === 'sub' || type === 'follow' || type === 'subscription') specificKey = 'youtube_sub';
+        else if (type === 'member' || type === 'membership') specificKey = 'youtube_member';
+        else if (type === 'superchat' || type === 'super_chat' || type === 'gift') specificKey = 'youtube_superchat';
+      }
+
+      const platKey = `${platform}_${type}`;
+      const normType = getNormalizedType(type);
+
+      let sound = '';
+      if (specificKey && eventsConfig.alertMedia[specificKey]?.sound) sound = eventsConfig.alertMedia[specificKey].sound;
+      else if (eventsConfig.alertMedia[platKey]?.sound) sound = eventsConfig.alertMedia[platKey].sound;
+      else if (eventsConfig.alertMedia[normType]?.sound) sound = eventsConfig.alertMedia[normType].sound;
+
+      return { sound };
+    }
+
+    socket.on('config:update', (cfg) => {
+      if (cfg) eventsConfig = cfg;
+      if (!urlFontSize && cfg.chatFontSize) {
+        currentFontSize = cfg.chatFontSize;
+        applyStyling();
+      }
+    });
+
+    socket.on('alert:history', (history) => {
+      container.innerHTML = '';
+      if (!history || history.length === 0) return;
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      const validHistory = history.filter(a => (a.timestamp || 0) >= cutoff);
+      validHistory.slice(0, 30).reverse().forEach(alert => addEvent(alert, false));
+    });
+
+    socket.on('alert', (alert) => {
+      addEvent(alert, true);
+      if (!soundEnabled) return;
+      const media = resolveAlertMedia(alert);
+      const customSound = media.sound;
+      const vol = eventsConfig.alertVolume !== undefined ? eventsConfig.alertVolume : 80;
+      if (customSound && String(customSound).trim().length > 0) {
+        playCustomEventsAudio(customSound.trim(), vol);
+      } else {
+        playAlertChime(vol);
+      }
+    });
+
+    function addEvent(alert, isPrepend = false) {
+      const line = document.createElement('div');
+      line.className = `event-line platform-${alert.platform}`;
+      line.style.fontSize = `${currentFontSize}px`;
+      line.setAttribute('data-timestamp', alert.timestamp || Date.now());
+
+      let icon = '🔔';
+      if (alert.type === 'follow') {
+        icon = alert.platform === 'kick' ? '🟢' : (alert.platform === 'twitch' ? '🟣' : (alert.platform === 'youtube' ? '🔴' : '💖'));
+      } else if (alert.type === 'sub' || alert.type === 'subscription') {
+        icon = '⭐';
+      } else if (alert.type === 'gift') {
+        icon = '🎁';
+      } else if (alert.type === 'cheer') {
+        icon = '💎';
+      } else if (alert.type === 'host') {
+        icon = '📡';
+      } else if (alert.type === 'raid' || alert.type === 'share') {
+        icon = '🚀';
+      }
+
+      let userColor = '#53fc18';
+      if (alert.platform === 'tiktok') userColor = '#00f2fe';
+      else if (alert.platform === 'twitch') userColor = '#bf94ff';
+      else if (alert.platform === 'youtube') userColor = '#ff4444';
+
+      let giftBadge = '';
+      if (alert.gift && alert.gift.coins) {
+        giftBadge = `<span class="gift-badge">${alert.gift.coins} 🪙</span>`;
+      }
+
+      // Sin hora y continuo: Icono Usuario: Descripción
+      line.innerHTML = `
+        <span class="event-icon">${icon}</span> <span class="event-user" style="color: ${userColor}">${escapeHtml(alert.user)}:</span> <span class="event-desc">${escapeHtml(alert.detail || alert.title)}</span>${giftBadge}
+      `;
+
+      if (isPrepend && container.firstChild) {
+        container.insertBefore(line, container.firstChild);
+      } else {
+        container.appendChild(line);
+      }
+
+      while (container.children.length > 50) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    // Auto-borrado de notificaciones de más de 10 minutos (600,000 ms)
+    function pruneExpiredEvents() {
+      const cutoff = Date.now() - 10 * 60 * 1000;
+      const lines = container.querySelectorAll('.event-line');
+      lines.forEach(line => {
+        const ts = parseInt(line.getAttribute('data-timestamp') || '0', 10);
+        if (ts && ts < cutoff) {
+          line.remove();
+        }
+      });
+    }
+    setInterval(pruneExpiredEvents, 10000);
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+  </script>
+  <audio id="events-custom-audio" preload="auto" style="display:none;"></audio>
+</body>
+</html>

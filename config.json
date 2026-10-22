@@ -1,0 +1,103 @@
+{
+  "kickUsername": "chamukoi",
+  "tiktokUsername": "keviinluna_",
+  "twitchUsername": "chamukop",
+  "youtubeChannel": "@LofiGirl",
+  "alertSound": true,
+  "alertVolume": 80,
+  "alertDuration": 5,
+  "chatTheme": "transparent",
+  "chatFontSize": 16,
+  "chatFadeTimeout": 0,
+  "alertMedia": {
+    "kick_follow": {
+      "image": "",
+      "sound": ""
+    },
+    "kick_sub": {
+      "image": "",
+      "sound": ""
+    },
+    "kick_giftsub": {
+      "image": "",
+      "sound": ""
+    },
+    "kick_host": {
+      "image": "",
+      "sound": ""
+    },
+    "kick_raid": {
+      "image": "",
+      "sound": ""
+    },
+    "tiktok_follow": {
+      "image": "",
+      "sound": ""
+    },
+    "tiktok_gift_rose": {
+      "image": "",
+      "sound": ""
+    },
+    "tiktok_gift_lion": {
+      "image": "",
+      "sound": ""
+    },
+    "twitch_follow": {
+      "image": "",
+      "sound": ""
+    },
+    "twitch_sub": {
+      "image": "",
+      "sound": ""
+    },
+    "twitch_host": {
+      "image": "",
+      "sound": ""
+    },
+    "twitch_raid": {
+      "image": "",
+      "sound": ""
+    },
+    "youtube_sub": {
+      "image": "",
+      "sound": ""
+    },
+    "youtube_member": {
+      "image": "",
+      "sound": ""
+    },
+    "youtube_superchat": {
+      "image": "",
+      "sound": ""
+    },
+    "follow": {
+      "image": "",
+      "sound": ""
+    },
+    "sub": {
+      "image": "",
+      "sound": ""
+    },
+    "gift": {
+      "image": "",
+      "sound": ""
+    },
+    "host": {
+      "image": "",
+      "sound": ""
+    },
+    "raid": {
+      "image": "",
+      "sound": ""
+    }
+  },
+  "customCss": "",
+  "customHtml": "",
+  "customJs": "",
+  "kickCache": {
+    "chamukoi": {
+      "channelId": 6884630,
+      "chatroomId": 6823990
+    }
+  }
+}

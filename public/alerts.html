@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>MultiChat - Alertas OBS</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: transparent;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Caja de Alerta simple y moderna */
+    #alert-box {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px 32px;
+      border-radius: 16px;
+      background: rgba(13, 17, 23, 0.88);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+      min-width: 380px;
+      max-width: 600px;
+      position: relative;
+      animation: alertIn 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+
+    #alert-box.alert-out {
+      animation: alertOut 0.35s ease-in forwards;
+    }
+
+    /* Bordes sutiles según la plataforma */
+    #alert-box.platform-kick {
+      border: 1.5px solid #53fc18;
+      box-shadow: 0 0 25px rgba(83, 252, 24, 0.3), 0 10px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    #alert-box.platform-tiktok {
+      border: 1.5px solid #00f2fe;
+      box-shadow: 0 0 25px rgba(0, 242, 254, 0.3), 0 10px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    #alert-box.platform-twitch {
+      border: 1.5px solid #9146ff;
+      box-shadow: 0 0 25px rgba(145, 70, 255, 0.35), 0 10px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    #alert-box.platform-youtube {
+      border: 1.5px solid #ff0000;
+      box-shadow: 0 0 25px rgba(255, 0, 0, 0.35), 0 10px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    @keyframes alertIn {
+      0% { opacity: 0; transform: translateY(-25px) scale(0.92); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes alertOut {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(20px) scale(0.92); }
+    }
+
+    .alert-media {
+      margin-bottom: 8px;
+    }
+
+    .event-icon {
+      font-size: 38px;
+      animation: iconBounce 0.8s ease infinite alternate;
+    }
+
+    .gift-image {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      animation: iconBounce 0.8s ease infinite alternate;
+    }
+
+    @keyframes iconBounce {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-6px) scale(1.08); }
+    }
+
+    /* Nombre de usuario */
+    .alert-user {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+
+    .platform-kick .alert-user {
+      color: #53fc18;
+      text-shadow: 0 0 18px rgba(83, 252, 24, 0.5);
+    }
+
+    .platform-tiktok .alert-user {
+      color: #00f2fe;
+      text-shadow: 0 0 18px rgba(0, 242, 254, 0.5);
+    }
+
+    .platform-twitch .alert-user {
+      color: #bf94ff;
+      text-shadow: 0 0 18px rgba(145, 70, 255, 0.5);
+    }
+
+    .platform-youtube .alert-user {
+      color: #ff4444;
+      text-shadow: 0 0 18px rgba(255, 68, 68, 0.5);
+    }
+
+    /* Detalle de la acción */
+    .alert-detail {
+      font-size: 17px;
+      font-weight: 600;
+      color: #f1f5f9;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .gift-badge {
+      display: inline-block;
+      margin-top: 6px;
+      background: rgba(254, 240, 138, 0.2);
+      border: 1px solid rgba(254, 240, 138, 0.3);
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fef08a;
+    }
+
+    .alert-custom-image {
+      max-width: 150px;
+      max-height: 120px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.4));
+      animation: alertPulseMedia 1.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes alertPulseMedia {
+      0% { transform: scale(0.96); }
+      100% { transform: scale(1.04); }
+    }
+  </style>
+  <style id="custom-alert-css"></style>
+</head>
+<body>
+
+  <div id="alert-box">
+    <div id="alert-media" class="alert-media"></div>
+    <div id="alert-user" class="alert-user"></div>
+    <div id="alert-detail" class="alert-detail"></div>
+    <div id="gift-badge" class="gift-badge" style="display: none;"></div>
+  </div>
+
+  <audio id="alert-custom-audio" preload="auto" style="display:none;"></audio>
+
+  <script>
+    const socket = io();
+    const alertBox = document.getElementById('alert-box');
+    const customStyleEl = document.getElementById('custom-alert-css');
+
+    let config = {
+      alertSound: true,
+      alertVolume: 80,
+      alertDuration: 5,
+      alertMedia: {
+        follow: { image: '', sound: '' },
+        sub: { image: '', sound: '' },
+        gift: { image: '', sound: '' },
+        host: { image: '', sound: '' },
+        raid: { image: '', sound: '' }
+      },
+      customCss: '',
+      customHtml: '',
+      customJs: ''
+    };
+
+    function applyConfig(cfg) {
+      if (!cfg) return;
+      config = {
+        ...config,
+        ...cfg,
+        alertMedia: {
+          ...config.alertMedia,
+          ...(cfg.alertMedia || {})
+        }
+      };
+      if (customStyleEl) {
+        customStyleEl.textContent = config.customCss || '';
+      }
+    }
+
+    // Cargar configuración inicial
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(applyConfig)
+      .catch(() => {});
+
+    socket.on('config:update', (cfg) => {
+      applyConfig(cfg);
+    });
+
+    const alertQueue = [];
+    let isPlaying = false;
+
+    socket.on('alert', (alertData) => {
+      alertQueue.push(alertData);
+      processQueue();
+    });
+
+    function processQueue() {
+      if (isPlaying || alertQueue.length === 0) return;
+      isPlaying = true;
+      const currentAlert = alertQueue.shift();
+      showAlert(currentAlert);
+    }
+
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) audioCtx = new AudioCtx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, initAudio, { once: true });
+    });
+
+    // Sintetizador Web Audio API: Sonido nítido
+    function playChime(volume = 80) {
+      if (!config.alertSound) return;
+
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        const now = audioCtx.currentTime;
+
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+
+          const gainVal = (volume / 100) * 0.25;
+          gain.gain.setValueAtTime(0.001, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(gainVal, now + idx * 0.09 + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.09 + 0.4);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.45);
+        });
+      } catch (err) {}
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    function getNormalizedType(type) {
+      if (!type) return 'follow';
+      const t = String(type).toLowerCase();
+      if (t === 'follow') return 'follow';
+      if (t === 'sub' || t === 'subscription' || t === 'giftsub') return 'sub';
+      if (t.includes('gift') || t === 'cheer') return 'gift';
+      if (t === 'host') return 'host';
+      if (t === 'raid' || t === 'share') return 'raid';
+      return 'follow';
+    }
+
+    function getDefaultIcon(alert) {
+      if (alert.type === 'sub' || alert.type === 'subscription' || alert.type === 'giftsub') return '⭐';
+      if (alert.type && alert.type.includes('gift')) return '🎁';
+      if (alert.type === 'cheer') return '💎';
+      if (alert.type === 'host') return '📡';
+      if (alert.type === 'share' || alert.type === 'raid') return '🚀';
+      return alert.platform === 'kick' ? '🟢' : (alert.platform === 'twitch' ? '🟣' : (alert.platform === 'youtube' ? '🔴' : '💖'));
+    }
+
+    function playCustomAudio(soundUrl, volume = 80) {
+      if (!config.alertSound) return;
+      initAudio();
+
+      const audioEl = document.getElementById('alert-custom-audio');
+      if (!audioEl) {
+        playChime(volume);
+        return;
+      }
+
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      audioEl.volume = Math.max(0, Math.min(1, volume / 100));
+      audioEl.src = soundUrl;
+
+      const p = audioEl.play();
+      if (p !== undefined) {
+        p.catch(err => {
+          console.warn('[Custom Alert Audio Warning]:', err.message, soundUrl);
+          playChime(volume);
+        });
+      }
+    }
+
+    function resolveAlertMedia(alert) {
+      if (!config.alertMedia) return { image: '', sound: '' };
+      const platform = (alert.platform || 'kick').toLowerCase();
+      const type = (alert.type || 'follow').toLowerCase();
+
+      // 1. Identificador específico
+      let specificKey = '';
+      if (platform === 'tiktok') {
+        if (type === 'follow') specificKey = 'tiktok_follow';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('le')) specificKey = 'tiktok_gift_lion';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('ros')) specificKey = 'tiktok_gift_rose';
+        else specificKey = 'tiktok_gift_rose';
+      } else if (platform === 'kick') {
+        if (type === 'follow') specificKey = 'kick_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'kick_sub';
+        else if (type === 'giftsub' || type === 'gift-sub' || (alert.title && alert.title.toLowerCase().includes('regalada'))) specificKey = 'kick_giftsub';
+        else if (type === 'host') specificKey = 'kick_host';
+        else if (type === 'raid') specificKey = 'kick_raid';
+      } else if (platform === 'twitch') {
+        if (type === 'follow') specificKey = 'twitch_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'twitch_sub';
+        else if (type === 'host') specificKey = 'twitch_host';
+        else if (type === 'raid') specificKey = 'twitch_raid';
+      } else if (platform === 'youtube') {
+        if (type === 'sub' || type === 'follow' || type === 'subscription') specificKey = 'youtube_sub';
+        else if (type === 'member' || type === 'membership') specificKey = 'youtube_member';
+        else if (type === 'superchat' || type === 'super_chat' || type === 'gift') specificKey = 'youtube_superchat';
+      }
+
+      const platKey = `${platform}_${type}`;
+      const normType = getNormalizedType(type);
+
+      // Cascada independiente para imagen
+      let image = '';
+      if (specificKey && config.alertMedia[specificKey]?.image) image = config.alertMedia[specificKey].image;
+      else if (config.alertMedia[platKey]?.image) image = config.alertMedia[platKey].image;
+      else if (config.alertMedia[normType]?.image) image = config.alertMedia[normType].image;
+
+      // Cascada independiente para sonido
+      let sound = '';
+      if (specificKey && config.alertMedia[specificKey]?.sound) sound = config.alertMedia[specificKey].sound;
+      else if (config.alertMedia[platKey]?.sound) sound = config.alertMedia[platKey].sound;
+      else if (config.alertMedia[normType]?.sound) sound = config.alertMedia[normType].sound;
+
+      return { image, sound };
+    }
+
+    function showAlert(alert) {
+      alertBox.className = `platform-${alert.platform || 'kick'}`;
+      const normType = getNormalizedType(alert.type);
+      const mediaCfg = resolveAlertMedia(alert);
+
+      // 1. Audio personalizado o campana
+      if (config.alertSound !== false) {
+        if (mediaCfg.sound && String(mediaCfg.sound).trim().length > 0) {
+          playCustomAudio(mediaCfg.sound.trim(), config.alertVolume || 80);
+        } else {
+          playChime(config.alertVolume || 80);
+        }
+      }
+
+      // Preparar elementos de medios e insignias
+      let mediaHtml = '';
+      if (mediaCfg.image) {
+        mediaHtml = `<img class="alert-custom-image" src="${mediaCfg.image}" alt="${normType}">`;
+      } else if (alert.gift && alert.gift.icon) {
+        mediaHtml = `<img class="gift-image" src="${alert.gift.icon}" alt="Gift">`;
+      } else {
+        mediaHtml = `<div class="event-icon">${getDefaultIcon(alert)}</div>`;
+      }
+
+      let badgeHtml = '';
+      if (alert.gift) {
+        badgeHtml = `<span class="gift-badge">🎁 ${escapeHtml(alert.gift.name)} x${alert.gift.count || 1} (${alert.gift.coins || 0} 🪙)</span>`;
+      }
+
+      // 2. Renderizado: Plantilla HTML personalizada o estándar
+      if (config.customHtml && config.customHtml.trim()) {
+        const rendered = config.customHtml
+          .replace(/\{user\}/g, escapeHtml(alert.user || 'Anónimo'))
+          .replace(/\{platform\}/g, escapeHtml((alert.platform || 'kick').toUpperCase()))
+          .replace(/\{title\}/g, escapeHtml(alert.title || ''))
+          .replace(/\{detail\}/g, escapeHtml(alert.detail || alert.title || ''))
+          .replace(/\{media\}/g, mediaHtml)
+          .replace(/\{badge\}/g, badgeHtml);
+
+        alertBox.innerHTML = rendered;
+      } else {
+        alertBox.innerHTML = `
+          <div id="alert-media" class="alert-media">${mediaHtml}</div>
+          <div id="alert-user" class="alert-user">${escapeHtml(alert.user || 'Anónimo')}</div>
+          <div id="alert-detail" class="alert-detail">${escapeHtml(alert.detail || alert.title || '')}</div>
+          <div id="gift-badge" class="gift-badge" style="${alert.gift && !mediaCfg.image ? 'display:inline-block;' : 'display:none;'}">${alert.gift ? `🎁 ${escapeHtml(alert.gift.name)} x${alert.gift.count || 1} (${alert.gift.coins || 0} 🪙)` : ''}</div>
+        `;
+      }
+
+      // 3. Ejecución de JS Personalizado
+      if (config.customJs && config.customJs.trim()) {
+        try {
+          const fn = new Function('alert', config.customJs);
+          fn(alert);
+        } catch (err) {
+          console.error('[CUSTOM JS ERROR]:', err);
+        }
+      }
+
+      alertBox.style.display = 'flex';
+      alertBox.classList.remove('alert-out');
+
+      const durationMs = (config.alertDuration || 5) * 1000;
+
+      setTimeout(() => {
+        alertBox.classList.add('alert-out');
+        setTimeout(() => {
+          alertBox.style.display = 'none';
+          alertBox.classList.remove('alert-out');
+          isPlaying = false;
+          setTimeout(processQueue, 300);
+        }, 350);
+      }, durationMs);
+    }
+
+    // Keep-Alive para mantener Render activo mientras OBS tenga la fuente de alertas abierta
+    setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 3 * 60 * 1000);
+  </script>
+</body>
+</html>
