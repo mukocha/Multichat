@@ -701,16 +701,30 @@
       gap: 10px;
     }
 
-    .form-box { display: flex; flex-direction: column; gap: 3px; }
-    .form-box label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
-    .form-box input {
-      background: #0f1015;
-      border: 1px solid var(--border-subtle);
+    .settings-card {
+      background: #11131b;
+      border: 1px solid #232738;
+      border-radius: 8px;
+      padding: 9px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .form-box { display: flex; flex-direction: column; gap: 4px; }
+    .form-box label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #94a3b8; }
+    .form-box input, .form-box select, .form-box textarea {
+      background: #0b0c12;
+      border: 1px solid #282d3e;
       border-radius: 5px;
-      padding: 6px 8px;
+      padding: 5px 8px;
       color: #fff;
       font-size: 11px;
       outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-box input:focus, .form-box select:focus, .form-box textarea:focus {
+      border-color: #3b82f6;
     }
     /* ======================================================== */
     /* VISTA 5: ENLACES OBS                                     */
@@ -783,7 +797,7 @@
           <span>🔔</span> Alertas
         </button>
         <button class="nav-btn" id="btn-tab-channels" onclick="switchMainView('channels')">
-          <span>📡</span> Canales
+          <span>⚙️</span> Ajustes
         </button>
         <button class="nav-btn" id="btn-tab-obs" onclick="switchMainView('obs')">
           <span>🔗</span> OBS
@@ -1014,37 +1028,110 @@
     </div>
 
     <!-- ======================================================== -->
-    <!-- VISTA 4: CONFIGURACIÓN DE CANALES                      -->
+    <!-- VISTA 4: CONFIGURACIÓN GENERAL Y CANALES                 -->
     <!-- ======================================================== -->
     <div id="view-channels">
-      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:4px;">
-        <h3 style="font-size:12px; font-weight:700; color:#fff;">📡 Canales de Transmisión</h3>
-        <p style="font-size:10px; color:var(--text-muted);">Guarda tus canales para conectar el chat en vivo:</p>
+      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:6px;">
+        <h3 style="font-size:12px; font-weight:700; color:#fff;">⚙️ Panel de Ajustes y Canales</h3>
+        <p style="font-size:10px; color:var(--text-muted);">Configura tus canales y personaliza la apariencia del chat y alertas para OBS:</p>
       </div>
 
-      <div class="form-box">
-        <label style="color:#53FC18;">🟢 Kick Username:</label>
-        <input type="text" id="inp-kick" placeholder="ej. chamukoi">
+      <!-- Sección 1: Canales de Transmisión -->
+      <div class="settings-card">
+        <div class="section-title">📡 Canales de Transmisión</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div class="form-box">
+            <label style="color:#53FC18;">🟢 Kick Username:</label>
+            <input type="text" id="inp-kick" placeholder="ej. chamukoi">
+          </div>
+          <div class="form-box">
+            <label style="color:#fe0979;">📱 TikTok Username:</label>
+            <input type="text" id="inp-tiktok" placeholder="ej. keviinluna_">
+          </div>
+          <div class="form-box">
+            <label style="color:#c084fc;">🟣 Twitch Username:</label>
+            <input type="text" id="inp-twitch" placeholder="ej. chamukop">
+          </div>
+          <div class="form-box">
+            <label style="color:#f87171;">🔴 YouTube Handle:</label>
+            <input type="text" id="inp-youtube" placeholder="ej. @CHAMUKO">
+          </div>
+        </div>
       </div>
 
-      <div class="form-box">
-        <label style="color:#fe0979;">📱 TikTok Username:</label>
-        <input type="text" id="inp-tiktok" placeholder="ej. keviinluna_">
+      <!-- Sección 2: Personalización del Chat en Pantalla -->
+      <div class="settings-card">
+        <div class="section-title">💬 Estilo del Chat en Pantalla (/chat.html)</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div class="form-box">
+            <label>🎨 Tema Visual:</label>
+            <select id="inp-chat-theme">
+              <option value="transparent">Transparente (Sobre el juego)</option>
+              <option value="glass">Glassmorphism (Efecto Blur)</option>
+              <option value="solid">Sólido Oscuro (Bordes de plataforma)</option>
+            </select>
+          </div>
+          <div class="form-box">
+            <label>📏 Tamaño de Letra:</label>
+            <select id="inp-chat-font-size">
+              <option value="14">14px - Compacto</option>
+              <option value="16">16px - Estándar</option>
+              <option value="18">18px - Mediano</option>
+              <option value="22">22px - Grande</option>
+              <option value="26">26px - Extra Grande</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-box" style="margin-top:2px;">
+          <label>⏳ Desvanecimiento de Mensajes (Fade Out):</label>
+          <select id="inp-chat-fade">
+            <option value="0">Permanente (Nunca desaparecen)</option>
+            <option value="10">Desvanecer tras 10 segundos</option>
+            <option value="20">Desvanecer tras 20 segundos</option>
+            <option value="40">Desvanecer tras 40 segundos</option>
+            <option value="60">Desvanecer tras 60 segundos</option>
+          </select>
+        </div>
       </div>
 
-      <div class="form-box">
-        <label style="color:#c084fc;">🟣 Twitch Username:</label>
-        <input type="text" id="inp-twitch" placeholder="ej. chamukop">
+      <!-- Sección 3: Ajustes de Alertas en Pantalla -->
+      <div class="settings-card">
+        <div class="section-title">🔔 Opciones de Alertas (/alerts.html)</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div class="form-box">
+            <label>⏱️ Duración en Pantalla:</label>
+            <select id="inp-alert-duration">
+              <option value="3">3 segundos</option>
+              <option value="5">5 segundos (Recomendado)</option>
+              <option value="7">7 segundos</option>
+              <option value="10">10 segundos</option>
+              <option value="15">15 segundos</option>
+            </select>
+          </div>
+          <div class="form-box">
+            <label>🔊 Volumen de Alertas:</label>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
+              <input type="range" id="inp-alert-volume" min="0" max="100" value="80" oninput="document.getElementById('alert-vol-label').innerText = this.value + '%'" style="flex:1; height:14px; accent-color:#3b82f6; cursor:pointer;">
+              <span id="alert-vol-label" style="font-size:11px; font-weight:700; color:#60a5fa; width:32px; text-align:right;">80%</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="form-box">
-        <label style="color:#f87171;">🔴 YouTube Handle:</label>
-        <input type="text" id="inp-youtube" placeholder="ej. @LofiGirl">
+      <!-- Sección 4: CSS Personalizado -->
+      <div class="settings-card">
+        <div class="section-title">🎨 CSS Personalizado para OBS (Opcional)</div>
+        <p style="font-size:9.5px; color:var(--text-dim); margin-bottom:2px;">Inyecta estilos CSS a las alertas o el chat en tiempo real:</p>
+        <textarea id="inp-custom-css" rows="2" placeholder="/* ej. #alert-box { border-radius: 20px; } */" style="background:#0a0b10; border:1px solid #24293a; border-radius:5px; padding:6px; color:#93c5fd; font-family:monospace; font-size:10px; width:100%; resize:vertical; outline:none;"></textarea>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; margin-top:6px;">
-        <button class="btn-act primary" style="padding:6px 14px; font-size:11px;" onclick="saveChannelsToServer()">
-          💾 Conectar y Guardar
+      <!-- Botón de Guardado -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid #232738; padding-top:8px;">
+        <span style="font-size:10px; color:var(--text-dim); display:flex; align-items:center; gap:4px;">
+          <span>💡</span> Se sincroniza automáticamente con OBS Studio.
+        </span>
+        <button class="btn-act primary" style="padding:6px 16px; font-size:11px; font-weight:700;" onclick="saveChannelsToServer()">
+          💾 Guardar Toda la Configuración
         </button>
       </div>
     </div>
@@ -1630,13 +1717,34 @@
     }
 
     // ==========================================
-    // 6. CANALES
+    // 6. AJUSTES Y CANALES
     // ==========================================
     function populateChannelInputs() {
       document.getElementById('inp-kick').value = config.kickUsername || '';
       document.getElementById('inp-tiktok').value = config.tiktokUsername || '';
       document.getElementById('inp-twitch').value = config.twitchUsername || '';
       document.getElementById('inp-youtube').value = config.youtubeChannel || '';
+
+      const selTheme = document.getElementById('inp-chat-theme');
+      if (selTheme) selTheme.value = config.chatTheme || 'transparent';
+
+      const selFontSize = document.getElementById('inp-chat-font-size');
+      if (selFontSize) selFontSize.value = String(config.chatFontSize || 16);
+
+      const selFade = document.getElementById('inp-chat-fade');
+      if (selFade) selFade.value = String(config.chatFadeTimeout !== undefined ? config.chatFadeTimeout : 0);
+
+      const selDuration = document.getElementById('inp-alert-duration');
+      if (selDuration) selDuration.value = String(config.alertDuration || 5);
+
+      const rngVol = document.getElementById('inp-alert-volume');
+      const lblVol = document.getElementById('alert-vol-label');
+      const curVol = config.alertVolume !== undefined ? config.alertVolume : 80;
+      if (rngVol) rngVol.value = curVol;
+      if (lblVol) lblVol.innerText = curVol + '%';
+
+      const txtCss = document.getElementById('inp-custom-css');
+      if (txtCss) txtCss.value = config.customCss || '';
     }
 
     function saveChannelsToServer() {
@@ -1644,6 +1752,24 @@
       config.tiktokUsername = document.getElementById('inp-tiktok').value.trim();
       config.twitchUsername = document.getElementById('inp-twitch').value.trim();
       config.youtubeChannel = document.getElementById('inp-youtube').value.trim();
+
+      const selTheme = document.getElementById('inp-chat-theme');
+      if (selTheme) config.chatTheme = selTheme.value;
+
+      const selFontSize = document.getElementById('inp-chat-font-size');
+      if (selFontSize) config.chatFontSize = parseInt(selFontSize.value, 10);
+
+      const selFade = document.getElementById('inp-chat-fade');
+      if (selFade) config.chatFadeTimeout = parseInt(selFade.value, 10);
+
+      const selDuration = document.getElementById('inp-alert-duration');
+      if (selDuration) config.alertDuration = parseInt(selDuration.value, 10);
+
+      const rngVol = document.getElementById('inp-alert-volume');
+      if (rngVol) config.alertVolume = parseInt(rngVol.value, 10);
+
+      const txtCss = document.getElementById('inp-custom-css');
+      if (txtCss) config.customCss = txtCss.value;
 
       fetch('/api/config', {
         method: 'POST',
@@ -1664,12 +1790,13 @@
               force: true
             })
           });
-          alert('¡Canales guardados y reconectando!');
+          alert('¡Toda la configuración y canales se guardaron y sincronizaron con éxito!');
           switchMainView('dock');
         } else {
-          alert('Error: ' + res.error);
+          alert('Error al guardar configuración: ' + res.error);
         }
-      });
+      })
+      .catch(() => alert('Error de red al guardar la configuración.'));
     }
 
     // ==========================================
