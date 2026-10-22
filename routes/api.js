@@ -193,40 +193,41 @@ app.post('/api/test-alert', (req, res) => {
   }
 
   let defaultUser = platform === 'kick' ? 'KickViewer_99' : (platform === 'twitch' ? 'TwitchFan_77' : (platform === 'youtube' ? 'YouTubeFan_24' : 'TikTokFan_10'));
+  const chosenUser = user || defaultUser;
   let defaultTitle = '¡Nueva Alerta!';
-  let defaultDetail = 'ha interactuado en el canal';
+  let defaultDetail = `${chosenUser} ha interactuado en el canal`;
 
   if (type === 'follow') {
     defaultTitle = platform === 'kick' ? '¡Nuevo Seguidor en Kick!' : (platform === 'twitch' ? '¡Nuevo Seguidor en Twitch!' : (platform === 'youtube' ? '¡Nuevo Suscriptor en YouTube!' : '¡Nuevo Seguidor en TikTok!'));
-    defaultDetail = platform === 'kick' ? 'ahora te sigue en Kick 🟢' : (platform === 'twitch' ? 'ahora te sigue en Twitch 🟣' : (platform === 'youtube' ? 'se ha suscrito al canal 🔴' : 'te ha comenzado a seguir 💖'));
+    defaultDetail = `${chosenUser} ahora te sigue en directo 💖`;
   } else if (type === 'sub' || type === 'subscription') {
-    defaultTitle = platform === 'kick' ? '¡Nueva Suscripción en Kick!' : (platform === 'twitch' ? '¡Nueva Suscripción en Twitch!' : (platform === 'youtube' ? '¡Nuevo Suscriptor en YouTube!' : '¡Nueva Suscripción!'));
-    defaultDetail = platform === 'kick' ? 'se ha suscrito al canal (Tier 1) ⭐' : (platform === 'twitch' ? 'se ha suscrito al canal con Prime ⭐' : (platform === 'youtube' ? 'se ha suscrito al canal 🔴' : 'se ha suscrito ⭐'));
+    defaultTitle = platform === 'kick' ? '¡Nueva Suscripción en Kick!' : (platform === 'twitch' ? '¡Nueva Suscripción en Twitch!' : (platform === 'youtube' ? '¡Nuevo Miembro en YouTube!' : '¡Nueva Suscripción!'));
+    defaultDetail = `${chosenUser} se ha suscrito al canal (Tier 1) ⭐`;
   } else if (type === 'member' || type === 'membership') {
     defaultTitle = '¡Nuevo Miembro del Canal!';
-    defaultDetail = 'se unió a las membresías del canal ⭐';
+    defaultDetail = `${chosenUser} se unió a las membresías del canal ⭐`;
   } else if (type === 'superchat' || type === 'super_chat') {
     defaultTitle = '¡Super Chat en YouTube!';
-    defaultDetail = detail || 'envió un Super Chat de $10.00 USD 💸';
+    defaultDetail = detail || `${chosenUser} envió un Super Chat de $10.00 USD 💸`;
   } else if (type === 'giftsub') {
     defaultTitle = '¡Suscripciones Regaladas!';
-    defaultDetail = 'regaló 5 suscripciones a la comunidad ⭐';
+    defaultDetail = `${chosenUser} regaló 5 suscripciones a la comunidad ⭐`;
   } else if (type === 'gift') {
     if (platform === 'youtube') {
       defaultTitle = '¡Super Chat en YouTube!';
-      defaultDetail = detail || 'envió un Super Chat de $10.00 USD 💸';
+      defaultDetail = detail || `${chosenUser} envió un Super Chat de $10.00 USD 💸`;
     } else {
       defaultTitle = '¡Regalo en TikTok!';
-      defaultDetail = detail || 'envió León x1 (29,999 🪙)';
+      defaultDetail = detail || `${chosenUser} envió Rosa x10 (10 🪙) 🌹`;
     }
   } else if (type === 'host') {
     const vCount = viewers || 38;
     defaultTitle = platform === 'kick' ? '¡Host en Kick!' : '¡Host en Twitch!';
-    defaultDetail = `te está hosteando con ${vCount} espectadores 📡`;
+    defaultDetail = `${chosenUser} te está hosteando con ${vCount} espectadores 📡`;
   } else if (type === 'raid') {
     const vCount = viewers || 54;
     defaultTitle = platform === 'kick' ? '¡Raid en Kick!' : '¡Raid en Twitch!';
-    defaultDetail = `llegó con una raid de ${vCount} espectadores 🚀`;
+    defaultDetail = `${chosenUser} llegó con una raid de ${vCount} espectadores 🚀`;
   }
 
   const alertData = {

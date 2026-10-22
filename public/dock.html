@@ -829,6 +829,15 @@
           <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
         </button>
       </div>
+
+      <!-- Banner de Confirmacion de Prueba Enviada -->
+      <div id="tester-feedback-card" style="display:none; background:#0f1118; border:1px solid #3b82f6; border-radius:6px; padding:7px 9px; margin-top:8px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="color:#60a5fa; font-weight:700; font-size:11px;">✓ Prueba enviada y sonido emitido</span>
+          <button class="btn-act primary" onclick="switchMainView('dock')" style="padding:2px 7px; font-size:9px;">Ver en Chat &gt;</button>
+        </div>
+        <div id="tester-feedback-detail" style="font-size:10px; color:#e2e8f0; margin-top:3px; font-weight:500;"></div>
+      </div>
     </div>
 
     <!-- ======================================================== -->
@@ -1169,8 +1178,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform })
-      }).then(() => {
-        switchMainView('dock');
+      }).then(r => r.json()).then(res => {
+        const u = (res.message && res.message.user) || 'Usuario';
+        const m = (res.message && res.message.message) || '';
+        showTesterNotice(`💬 Mensaje simulado en ${platform.toUpperCase()}: @${u}: "${m}"`);
       });
     }
 
@@ -1183,9 +1194,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform: plat, user: 'StreamerTest', message: msg })
-      }).then(() => {
+      }).then(r => r.json()).then(res => {
         document.getElementById('inp-test-msg').value = '';
-        switchMainView('dock');
+        const m = (res.message && res.message.message) || msg;
+        showTesterNotice(`💬 Mensaje enviado (${plat.toUpperCase()}): "${m}"`);
       });
     }
 
@@ -1194,9 +1206,19 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform, type })
-      }).then(() => {
-        switchMainView('dock');
+      }).then(r => r.json()).then(res => {
+        const d = (res.alert && res.alert.detail) || (res.alert && res.alert.title) || `${type} en ${platform}`;
+        showTesterNotice(`🔔 Alerta y sonido emitidos (${platform.toUpperCase()}): ${d}`);
       });
+    }
+
+    function showTesterNotice(text) {
+      const card = document.getElementById('tester-feedback-card');
+      const detail = document.getElementById('tester-feedback-detail');
+      if (card && detail) {
+        detail.innerText = text;
+        card.style.display = 'block';
+      }
     }
 
     // ==========================================
@@ -1400,17 +1422,36 @@
 
     function renderViewers(v) {
       if (!v) return;
-      const { kick = 0, tiktok = 0, twitch = 0, youtube = 0, total = 0 } = v;
-      document.getElementById('count-twitch').innerText = twitch;
-      document.getElementById('count-kick').innerText = kick;
-      document.getElementById('count-tiktok').innerText = tiktok;
-      document.getElementById('count-youtube').innerText = youtube;
-      document.getElementById('count-total').innerText = total;
+      function extractCount(val) {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        if (typeof val === 'object') return Number(val.viewers) || 0;
+        const n = parseInt(val, 10);
+        return isNaN(n) ? 0 : n;
+      }
+      function checkLive(val, count) {
+        if (typeof val === 'object' && val !== null) {
+          return Boolean(val.isLive || val.connected || (val.viewers > 0));
+        }
+        return count > 0;
+      }
 
-      document.getElementById('dot-twitch').className = 'v-dot twitch ' + (twitch > 0 ? '' : 'off');
-      document.getElementById('dot-kick').className = 'v-dot kick ' + (kick > 0 ? '' : 'off');
-      document.getElementById('dot-tiktok').className = 'v-dot tiktok ' + (tiktok > 0 ? '' : 'off');
-      document.getElementById('dot-youtube').className = 'v-dot youtube ' + (youtube > 0 ? '' : 'off');
+      const twitchCount = extractCount(v.twitch);
+      const kickCount = extractCount(v.kick);
+      const tiktokCount = extractCount(v.tiktok);
+      const youtubeCount = extractCount(v.youtube);
+      const totalCount = v.total !== undefined ? extractCount(v.total) : (twitchCount + kickCount + tiktokCount + youtubeCount);
+
+      document.getElementById('count-twitch').innerText = twitchCount;
+      document.getElementById('count-kick').innerText = kickCount;
+      document.getElementById('count-tiktok').innerText = tiktokCount;
+      document.getElementById('count-youtube').innerText = youtubeCount;
+      document.getElementById('count-total').innerText = totalCount;
+
+      document.getElementById('dot-twitch').className = 'v-dot twitch ' + (checkLive(v.twitch, twitchCount) ? '' : 'off');
+      document.getElementById('dot-kick').className = 'v-dot kick ' + (checkLive(v.kick, kickCount) ? '' : 'off');
+      document.getElementById('dot-tiktok').className = 'v-dot tiktok ' + (checkLive(v.tiktok, tiktokCount) ? '' : 'off');
+      document.getElementById('dot-youtube').className = 'v-dot youtube ' + (checkLive(v.youtube, youtubeCount) ? '' : 'off');
     }
 
     socket.on('chat:message', (msg) => {
@@ -1456,7 +1497,22 @@
 
       const badgeClass = `badge-${plat}`;
       const title = escapeHtml(alert.title || '¡Nueva Alerta!');
-      const detail = escapeHtml(alert.detail || '');
+      const rawUser = alert.user || alert.nickname || '';
+      const userSpan = rawUser ? `<strong style="color:#fff; font-weight:800;">@${escapeHtml(rawUser)}</strong>` : '';
+      let detail = escapeHtml(alert.detail || '');
+
+      let descContent = '';
+      if (rawUser && !detail.toLowerCase().includes(rawUser.toLowerCase())) {
+        descContent = `${userSpan} ${detail}`;
+      } else if (rawUser) {
+        descContent = detail.replace(new RegExp(escapeRegex(rawUser), 'gi'), userSpan);
+      } else {
+        descContent = detail || '¡Nuevo evento en stream!';
+      }
+
+      if (alert.gift && alert.gift.name) {
+        descContent += ` <span style="background:rgba(254,9,121,0.25); color:#fe0979; border:1px solid rgba(254,9,121,0.4); padding:1px 5px; border-radius:3px; font-weight:700;">🎁 ${escapeHtml(alert.gift.name)} x${alert.gift.count || 1}</span>`;
+      }
 
       div.innerHTML = `
         <div class="ev-header">
@@ -1466,7 +1522,7 @@
           </div>
           <span class="ev-time">ahora</span>
         </div>
-        <div class="ev-desc">${detail}</div>
+        <div class="ev-desc">${descContent}</div>
       `;
 
       chatStream.appendChild(div);
@@ -1543,6 +1599,11 @@
       const div = document.createElement('div');
       div.innerText = text;
       return div.innerHTML;
+    }
+
+    function escapeRegex(text) {
+      if (!text) return '';
+      return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
   </script>
 </body>
