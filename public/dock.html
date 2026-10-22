@@ -40,14 +40,14 @@
     /* Contenedor Compacto de Dock (Estilo Columna OBS) */
     #dock-container {
       width: 100%;
-      max-width: 460px; /* Tamaño ideal para dock de OBS sin estirarse en toda la pantalla */
+      max-width: 500px; /* Tamaño ideal y ergonómico para OBS Dock */
       height: 100vh;
       display: flex;
       flex-direction: column;
       background: var(--bg-surface);
       border-left: 1px solid var(--border-subtle);
       border-right: 1px solid var(--border-subtle);
-      box-shadow: 0 0 25px rgba(0,0,0,0.5);
+      box-shadow: 0 0 35px rgba(0,0,0,0.6);
       position: relative;
     }
 
@@ -507,24 +507,53 @@
     .plat-tab-btn.active.youtube { background: rgba(255,0,0,0.15); color: #f87171; border-color: rgba(255,0,0,0.3); }
 
     .event-sound-item {
-      background: #0f1015;
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 6px 8px;
+      background: #11131b;
+      border: 1px solid #232738;
+      border-radius: 8px;
+      padding: 9px 10px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
+    .event-sound-item:hover {
+      border-color: #363d59;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+    .event-sound-item.kick { border-left: 3px solid var(--color-kick); }
+    .event-sound-item.tiktok { border-left: 3px solid var(--color-tiktok); }
+    .event-sound-item.twitch { border-left: 3px solid var(--color-twitch); }
+    .event-sound-item.youtube { border-left: 3px solid var(--color-youtube); }
 
     .es-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
     }
 
-    .es-title { font-size: 11px; font-weight: 700; color: #fff; }
-    .es-file-info { font-size: 9px; color: var(--text-dim); }
-    .es-file-info code { background: #262836; padding: 1px 3px; border-radius: 3px; color: #e2e8f0; }
+    .es-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .es-file-info {
+      font-size: 9.5px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+    .es-file-info code {
+      background: #1e2230;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #93c5fd;
+      font-family: monospace;
+      font-size: 9px;
+    }
 
     .es-controls {
       display: flex;
@@ -534,41 +563,65 @@
     }
 
     .btn-act {
-      background: #232532;
-      border: 1px solid #36394c;
+      background: #1b1e2b;
+      border: 1px solid #2e344a;
       color: #e2e8f0;
-      padding: 3px 6px;
-      border-radius: 4px;
+      padding: 4px 8px;
+      border-radius: 5px;
       font-size: 10px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       transition: all 0.15s;
+      white-space: nowrap;
     }
-    .btn-act:hover { background: #313547; color: #fff; }
-    .btn-act.primary { background: rgba(37,99,235,0.25); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
-    .btn-act.primary:hover { background: rgba(37,99,235,0.35); }
+    .btn-act:hover { background: #272c3e; border-color: #424a68; color: #fff; }
+    .btn-act.primary {
+      background: rgba(37, 99, 235, 0.2);
+      border-color: rgba(59, 130, 246, 0.45);
+      color: #93c5fd;
+    }
+    .btn-act.primary:hover {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #fff;
+    }
+    .btn-act.success {
+      background: rgba(16, 185, 129, 0.18);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+    }
+    .btn-act.success:hover {
+      background: #059669;
+      border-color: #10b981;
+      color: #fff;
+    }
 
     .es-media-row {
       display: flex;
       align-items: center;
-      gap: 7px;
-      background: #14151e;
-      border: 1px dashed #2a2e40;
-      border-radius: 5px;
-      padding: 5px 7px;
+      gap: 8px;
+      background: #0a0b10;
+      border: 1px solid #1f2333;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .es-media-row.has-image {
+      border-color: rgba(59, 130, 246, 0.35);
+      background: rgba(15, 23, 42, 0.45);
     }
 
     .es-media-thumb {
       width: 44px;
       height: 44px;
-      border-radius: 5px;
-      background: #090a0f;
-      border: 1px solid #363b52;
+      border-radius: 6px;
+      background: #07080c;
+      border: 1px solid #3b82f6;
       object-fit: contain;
       flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
       transition: transform 0.15s;
     }
     .es-media-thumb:hover { transform: scale(1.08); }
@@ -576,14 +629,13 @@
     .es-media-empty {
       width: 44px;
       height: 44px;
-      border-radius: 5px;
-      background: #090a0f;
-      border: 1px dashed #363a4e;
+      border-radius: 6px;
+      background: #13151f;
+      border: 1px dashed #2d3348;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      color: var(--text-dim);
+      color: #64748b;
       flex-shrink: 0;
     }
 
@@ -598,15 +650,15 @@
     .es-media-label {
       font-size: 10px;
       font-weight: 700;
-      color: #e2e8f0;
+      color: #f1f5f9;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
 
     .es-media-path {
       font-size: 9px;
-      color: var(--text-dim);
+      color: #64748b;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -616,7 +668,7 @@
     .es-media-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       flex-shrink: 0;
     }
 
@@ -624,7 +676,7 @@
       background: rgba(239, 68, 68, 0.15);
       border: 1px solid rgba(239, 68, 68, 0.35);
       color: #f87171;
-      padding: 3px 6px;
+      padding: 4px 7px;
       border-radius: 4px;
       font-size: 10px;
       font-weight: 700;
@@ -702,7 +754,15 @@
       outline: none;
     }
 
-    #sound-file-picker { display: none; }
+    #sound-file-picker, #image-file-picker {
+      display: none !important;
+      visibility: hidden !important;
+      position: absolute !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
   </style>
 </head>
 <body>
@@ -943,9 +1003,11 @@
 
       <div id="sound-events-list" style="display:flex; flex-direction:column; gap:6px;"></div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; border-top:1px solid var(--border-subtle); padding-top:6px;">
-        <span style="font-size:9px; color:var(--text-dim);">💡 Los cambios se sincronizan en vivo con tu OBS Studio.</span>
-        <button class="btn-act primary" style="padding:5px 14px; font-size:11px;" onclick="saveConfigToServer(true)">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; border-top:1px solid #232738; padding-top:8px;">
+        <span style="font-size:10px; color:var(--text-dim); display:flex; align-items:center; gap:4px;">
+          <span>💡</span> Sincronizado en tiempo real con OBS Studio.
+        </span>
+        <button class="btn-act primary" style="padding:6px 16px; font-size:11px; font-weight:700;" onclick="saveConfigToServer(true)">
           💾 Guardar Alertas
         </button>
       </div>
@@ -1047,10 +1109,10 @@
   </div> <!-- Fin #dock-container -->
 
   <!-- Input Oculto de Archivos para Subir Audios -->
-  <input type="file" id="sound-file-picker" accept="audio/*" onchange="uploadSelectedSound(event)">
+  <input type="file" id="sound-file-picker" accept="audio/*" style="display:none !important;" onchange="uploadSelectedSound(event)">
 
   <!-- Input Oculto de Archivos para Subir GIFs e Imagenes -->
-  <input type="file" id="image-file-picker" accept="image/gif,image/png,image/jpeg,image/webp" onchange="uploadSelectedImage(event)">
+  <input type="file" id="image-file-picker" accept="image/gif,image/png,image/jpeg,image/webp" style="display:none !important;" onchange="uploadSelectedImage(event)">
 
   <!-- Audio Player para Archivos Subidos -->
   <audio id="audio-player" preload="auto"></audio>
@@ -1363,19 +1425,23 @@
         const hasImage = Boolean(imgSrc && imgSrc.trim().length > 0);
         const imgFilename = hasImage ? (imgSrc.split('/').pop().split('?')[0]) : '';
 
+        const emptySvg = `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="opacity:0.6;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
+
         return `
-          <div class="event-sound-item">
+          <div class="event-sound-item ${plat}">
             <div class="es-top">
               <div>
                 <span class="es-title">${ev.label}</span>
-                <div class="es-file-info">Sonido: <code>${soundSrc}</code></div>
+                <div class="es-file-info">Sonido actual: <code>${soundSrc}</code></div>
               </div>
-              <button class="btn-act" onclick="testEventAlert('${plat}', '${ev.key}')" title="Probar cómo se ve y suena esta alerta">▶ Probar Alerta</button>
+              <button class="btn-act primary" onclick="testEventAlert('${plat}', '${ev.key}')" title="Probar cómo se ve y suena esta alerta">
+                <span>▶ Probar Alerta</span>
+              </button>
             </div>
 
             <!-- Controles de Audio y Volumen -->
             <div class="es-controls">
-              <select onchange="setEventSound('${ev.key}', this.value)" style="background:#171822; border:1px solid #333648; color:#fff; border-radius:4px; padding:3px 5px; font-size:10px;">
+              <select onchange="setEventSound('${ev.key}', this.value)" style="background:#151824; border:1px solid #2d3348; color:#fff; border-radius:5px; padding:4px 6px; font-size:10.5px; flex:1; min-width:130px;">
                 <option value="default" ${soundSrc==='default'?'selected':''}>🔔 Predeterminado (Automático)</option>
                 <option value="chime" ${soundSrc==='chime'?'selected':''}>✨ Chime Cristalino</option>
                 <option value="fanfare" ${soundSrc==='fanfare'?'selected':''}>🎺 Fanfarria Triunfal</option>
@@ -1385,23 +1451,25 @@
                 ${isCustomSound ? `<option value="${soundSrc}" selected>📁 MP3: ${soundSrc.split('/').pop()}</option>` : ''}
               </select>
 
-              <button class="btn-act primary" onclick="openFilePicker('${ev.key}')" title="Subir audio MP3 o WAV">📂 Subir MP3</button>
+              <button class="btn-act" onclick="openFilePicker('${ev.key}')" title="Subir audio MP3 o WAV">
+                <span>📂 Subir MP3</span>
+              </button>
 
-              <div style="display:flex; align-items:center; gap:3px; margin-left:auto; font-size:10px; color:var(--text-muted);">
-                <span>Vol:</span>
-                <input type="range" min="0" max="100" value="${vol}" onchange="setEventVolume('${ev.key}', this.value)" oninput="this.nextElementSibling.innerText = this.value + '%'" style="width:50px; height:16px; accent-color:#10b981; cursor:pointer;">
-                <span style="width:24px; text-align:right; font-weight:700;">${vol}%</span>
+              <div style="display:flex; align-items:center; gap:4px; margin-left:auto; font-size:10px; color:var(--text-muted);">
+                <span style="font-weight:600;">Vol:</span>
+                <input type="range" min="0" max="100" value="${vol}" onchange="setEventVolume('${ev.key}', this.value)" oninput="this.nextElementSibling.innerText = this.value + '%'" style="width:48px; height:14px; accent-color:#10b981; cursor:pointer;">
+                <span style="width:26px; text-align:right; font-weight:700; color:#10b981;">${vol}%</span>
               </div>
             </div>
 
             <!-- Fila de GIF / Imagen de Alerta -->
-            <div class="es-media-row">
+            <div class="es-media-row ${hasImage ? 'has-image' : ''}">
               ${hasImage ? `
                 <img src="${imgSrc}" class="es-media-thumb" alt="Preview GIF" title="Haz clic para cambiar" onclick="openImagePicker('${ev.key}')" style="cursor:pointer;">
                 <div class="es-media-info">
                   <div class="es-media-label">
                     <span>🖼️ GIF / Imagen Activa</span>
-                    <span style="font-size:8px; background:rgba(59,130,246,0.25); color:#93c5fd; padding:1px 4px; border-radius:3px;">Asignada</span>
+                    <span style="font-size:8px; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); padding:1px 5px; border-radius:3px; font-weight:700;">● EN VIVO</span>
                   </div>
                   <div class="es-media-path" title="${imgSrc}">${imgFilename}</div>
                 </div>
@@ -1411,14 +1479,18 @@
                   <button class="btn-remove-media" onclick="removeEventImage('${ev.key}')" title="Quitar imagen y usar icono estándar">✕</button>
                 </div>
               ` : `
-                <div class="es-media-empty">🖼️</div>
+                <div class="es-media-empty">${emptySvg}</div>
                 <div class="es-media-info">
-                  <div class="es-media-label">Sin GIF / Imagen</div>
-                  <div class="es-media-path">Se muestra el icono predeterminado</div>
+                  <div class="es-media-label" style="color:#cbd5e1;">Sin GIF personalizado</div>
+                  <div class="es-media-path">Se muestra el icono estándar en pantalla</div>
                 </div>
                 <div class="es-media-actions">
-                  <button class="btn-act primary" onclick="openImagePicker('${ev.key}')" title="Subir GIF animado o foto (.gif, .png, .jpg, .webp)">🖼️ Subir GIF</button>
-                  <button class="btn-act" onclick="promptImageUrl('${ev.key}')" title="Pegar URL de Tenor, Giphy, etc.">🔗 URL</button>
+                  <button class="btn-act success" onclick="openImagePicker('${ev.key}')" title="Subir GIF animado o foto (.gif, .png, .jpg, .webp)">
+                    <span>🖼️ Subir GIF</span>
+                  </button>
+                  <button class="btn-act" onclick="promptImageUrl('${ev.key}')" title="Pegar URL de Tenor, Giphy, etc.">
+                    <span>🔗 URL</span>
+                  </button>
                 </div>
               `}
             </div>

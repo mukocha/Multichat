@@ -11,84 +11,84 @@
   "chatFadeTimeout": 0,
   "alertMedia": {
     "kick_follow": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": "/uploads/alert-kick_follow-1792630628370-7b70a389.png"
     },
     "kick_sub": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "kick_giftsub": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "kick_host": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "kick_raid": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "tiktok_follow": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "tiktok_gift_rose": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "tiktok_gift_lion": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "twitch_follow": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "twitch_sub": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "twitch_host": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "twitch_raid": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "youtube_sub": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "youtube_member": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "youtube_superchat": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "follow": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "sub": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "gift": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "host": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     },
     "raid": {
-      "image": "",
-      "sound": ""
+      "sound": "",
+      "image": ""
     }
   },
   "customCss": "",
