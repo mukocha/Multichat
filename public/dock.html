@@ -6,24 +6,22 @@
   <title>MultiChat Pro - Dock OBS</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    /* Reset & Base Variables */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     :root {
-      --bg-darkest: #121214;
-      --bg-surface: #18181b;
-      --bg-card: #202024;
-      --bg-card-hover: #27272a;
-      --border-subtle: #27272a;
-      --border-focus: #3f3f46;
-      --text-main: #f4f4f5;
-      --text-muted: #a1a1aa;
-      --text-dim: #71717a;
+      --bg-darkest: #0d0e12;
+      --bg-surface: #14151a;
+      --bg-card: #1c1d24;
+      --bg-card-hover: #24252e;
+      --border-subtle: #262732;
+      --border-focus: #3b3d4f;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
       
       --color-twitch: #9146FF;
       --color-kick: #53FC18;
       --color-tiktok: #fe0979;
-      --color-tiktok-cyan: #00f2fe;
       --color-youtube: #FF0000;
     }
 
@@ -34,36 +32,50 @@
       height: 100vh;
       width: 100vw;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       overflow: hidden;
       user-select: text;
     }
 
-    /* Scrollbars elegantes estilo OBS */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
-    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    /* Contenedor Compacto de Dock (Estilo Columna OBS) */
+    #dock-container {
+      width: 100%;
+      max-width: 460px; /* Tamaño ideal para dock de OBS sin estirarse en toda la pantalla */
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      border-right: 1px solid var(--border-subtle);
+      box-shadow: 0 0 25px rgba(0,0,0,0.5);
+      position: relative;
+    }
 
-    /* Top Navigation Tabs (Dock vs Sonidos vs Cuentas) */
+    /* Scrollbars ultra delgadas */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.15); }
+    ::-webkit-scrollbar-thumb { background: #333644; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #45495c; }
+
+    /* Barra Superior de Navegación Compacta */
     .nav-bar {
-      background: #09090b;
+      background: #0a0b0e;
       border-bottom: 1px solid var(--border-subtle);
-      padding: 6px 10px;
+      padding: 4px 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
+      gap: 4px;
       flex-shrink: 0;
     }
 
     .nav-tabs {
       display: flex;
       align-items: center;
-      gap: 4px;
-      background: #18181b;
-      padding: 3px;
-      border-radius: 8px;
+      gap: 2px;
+      background: #14151b;
+      padding: 2px;
+      border-radius: 6px;
       border: 1px solid var(--border-subtle);
     }
 
@@ -71,44 +83,44 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 4px 10px;
-      border-radius: 6px;
+      padding: 3px 8px;
+      border-radius: 4px;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       transition: all 0.15s;
     }
-    .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
-    .nav-btn.active { background: #27272a; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .nav-btn.active { background: #262836; color: #fff; }
 
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
     }
 
     .btn-icon-nav {
-      background: #18181b;
+      background: #14151b;
       border: 1px solid var(--border-subtle);
       color: var(--text-muted);
-      border-radius: 6px;
-      width: 26px;
-      height: 26px;
+      border-radius: 5px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .btn-icon-nav:hover { background: #27272a; color: #fff; }
-    .btn-icon-nav.active { color: #53FC18; border-color: rgba(83,252,24,0.4); }
+    .btn-icon-nav:hover { background: #262836; color: #fff; }
+    .btn-icon-nav.active { color: #53FC18; border-color: rgba(83,252,24,0.3); }
 
     /* ======================================================== */
-    /* VISTA 1: DOCK DE OBS (Viewers, Filtros, Feed)            */
+    /* VISTA 1: DOCK COMPACTO (Chat + Viewers + Eventos)         */
     /* ======================================================== */
     #view-dock {
       flex: 1;
@@ -118,14 +130,14 @@
       background: var(--bg-surface);
     }
 
-    /* HUD Superior de Viewers */
+    /* HUD Compacto de Espectadores */
     .hud-header {
-      background: var(--bg-darkest);
+      background: #0f1015;
       border-bottom: 1px solid var(--border-subtle);
-      padding: 8px 10px 6px 10px;
+      padding: 6px 8px 5px 8px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       flex-shrink: 0;
     }
 
@@ -138,23 +150,23 @@
     .hud-title-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .hud-title {
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
       text-transform: uppercase;
-      color: #a1a1aa;
+      color: #94a3b8;
     }
 
     .badge-live {
       display: inline-flex;
       align-items: center;
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9px;
       font-weight: 700;
       background: #450a0a;
       color: #f87171;
@@ -164,29 +176,29 @@
     .badge-total-viewers {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      background: #27272a;
-      border: 1px solid #3f3f46;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 11px;
+      gap: 3px;
+      background: #1e202b;
+      border: 1px solid #313545;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
       font-weight: 600;
-      color: #e4e4e7;
+      color: #e2e8f0;
     }
     .badge-total-viewers strong { color: #fff; font-weight: 800; }
 
-    /* Grid de Viewers de 4 Plataformas */
+    /* Barra Compacta de 4 Plataformas */
     .viewers-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
+      gap: 3px;
     }
 
     .v-card {
-      background: rgba(24, 24, 27, 0.9);
+      background: #171821;
       border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 4px 6px;
+      border-radius: 5px;
+      padding: 3px 5px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -196,108 +208,108 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      color: #d4d4d8;
+      font-size: 10px;
+      font-weight: 600;
+      color: #cbd5e1;
     }
 
     .v-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
     }
-    .v-dot.twitch { background: var(--color-twitch); box-shadow: 0 0 5px var(--color-twitch); }
-    .v-dot.kick { background: var(--color-kick); box-shadow: 0 0 5px var(--color-kick); }
-    .v-dot.tiktok { background: var(--color-tiktok); box-shadow: 0 0 5px var(--color-tiktok); }
-    .v-dot.youtube { background: var(--color-youtube); box-shadow: 0 0 5px var(--color-youtube); }
-    .v-dot.off { background: #52525b; box-shadow: none; }
+    .v-dot.twitch { background: var(--color-twitch); box-shadow: 0 0 4px var(--color-twitch); }
+    .v-dot.kick { background: var(--color-kick); box-shadow: 0 0 4px var(--color-kick); }
+    .v-dot.tiktok { background: var(--color-tiktok); box-shadow: 0 0 4px var(--color-tiktok); }
+    .v-dot.youtube { background: var(--color-youtube); box-shadow: 0 0 4px var(--color-youtube); }
+    .v-dot.off { background: #475569; box-shadow: none; }
 
     .v-num {
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 10px;
+      font-weight: 800;
       color: #fff;
       font-family: monospace;
     }
 
-    /* Sub-barra de Filtros Rápidos */
+    /* Filtros Rápidos */
     .filter-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-top: 4px;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 11px;
+      padding-top: 3px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 10px;
     }
 
     .filter-btns {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
     }
 
     .f-btn {
       background: transparent;
       border: none;
       color: var(--text-dim);
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .f-btn:hover { color: #fff; background: #27272a; }
-    .f-btn.active { background: #3f3f46; color: #fff; font-weight: 600; }
+    .f-btn:hover { color: #fff; background: #1e202b; }
+    .f-btn.active { background: #2f3345; color: #fff; }
 
     .btn-clear-feed {
       background: transparent;
       border: none;
       color: var(--text-dim);
       cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
+      padding: 1px 3px;
+      border-radius: 3px;
       transition: color 0.15s;
     }
     .btn-clear-feed:hover { color: #f87171; }
 
-    /* Feed de Chat y Alertas */
+    /* Feed de Chat Denso y Compacto */
     #chat-stream {
       flex: 1;
       overflow-y: auto;
-      padding: 8px 10px;
+      padding: 6px 8px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      font-size: 13px;
+      gap: 3px;
+      font-size: 12px;
     }
 
-    /* Badges Oficiales */
+    /* Badges */
     .badge-twitch { background: var(--color-twitch); color: white; }
     .badge-kick { background: var(--color-kick); color: #000; font-weight: 700; }
     .badge-tiktok { background: linear-gradient(135deg, #00f2fe 0%, #fe0979 100%); color: white; font-weight: 700; }
     .badge-youtube { background: var(--color-youtube); color: white; }
 
     .platform-badge {
-      font-size: 9px;
+      font-size: 8px;
       text-transform: uppercase;
       font-weight: 800;
-      padding: 1px 5px;
+      padding: 1px 4px;
       border-radius: 3px;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
       display: inline-block;
       vertical-align: middle;
-      margin-right: 4px;
-      line-height: 1.25;
+      margin-right: 3px;
+      line-height: 1.2;
     }
 
     /* Mensajes de Chat */
     .msg-chat-item {
       display: flex;
       align-items: flex-start;
-      gap: 4px;
-      padding: 3px 5px;
-      border-radius: 6px;
-      line-height: 1.35;
+      gap: 3px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      line-height: 1.3;
       word-break: break-word;
       transition: background 0.1s;
     }
@@ -305,138 +317,182 @@
 
     .user-name {
       font-weight: 700;
-      margin-right: 4px;
+      margin-right: 3px;
     }
     .user-name.twitch { color: #c084fc; }
     .user-name.kick { color: #53FC18; }
     .user-name.tiktok { color: #00f2fe; }
     .user-name.youtube { color: #f87171; }
 
-    .msg-body {
-      color: #e4e4e7;
-    }
+    .msg-body { color: #e2e8f0; }
 
-    /* Tarjetas de Eventos en el Feed */
+    /* Tarjetas de Eventos Compactas */
     .msg-event-card {
-      padding: 7px 10px;
-      border-radius: 0 6px 6px 0;
-      font-size: 12px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-      animation: fadeIn 0.2s ease-out;
-      margin: 2px 0;
+      padding: 4px 8px;
+      border-radius: 0 4px 4px 0;
+      font-size: 11px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.15s ease-out;
+      margin: 1px 0;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-3px); }
+      from { opacity: 0; transform: translateY(-2px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
     .msg-event-card.kick {
-      background: linear-gradient(to right, rgba(6, 78, 59, 0.7), #18181b);
-      border-left: 4px solid var(--color-kick);
+      background: linear-gradient(to right, rgba(6, 78, 59, 0.6), #14151a);
+      border-left: 3px solid var(--color-kick);
     }
     .msg-event-card.tiktok {
-      background: linear-gradient(to right, rgba(80, 7, 36, 0.7), #18181b);
-      border-left: 4px solid var(--color-tiktok);
+      background: linear-gradient(to right, rgba(80, 7, 36, 0.6), #14151a);
+      border-left: 3px solid var(--color-tiktok);
     }
     .msg-event-card.twitch {
-      background: linear-gradient(to right, rgba(59, 7, 100, 0.7), #18181b);
-      border-left: 4px solid var(--color-twitch);
+      background: linear-gradient(to right, rgba(59, 7, 100, 0.6), #14151a);
+      border-left: 3px solid var(--color-twitch);
     }
     .msg-event-card.youtube {
-      background: linear-gradient(to right, rgba(69, 10, 10, 0.7), #18181b);
-      border-left: 4px solid var(--color-youtube);
+      background: linear-gradient(to right, rgba(69, 10, 10, 0.6), #14151a);
+      border-left: 3px solid var(--color-youtube);
     }
 
     .ev-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
-
-    .ev-title-wrap {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .ev-title { font-weight: 700; font-size: 12px; }
+    .ev-title-wrap { display: flex; align-items: center; gap: 4px; }
+    .ev-title { font-weight: 700; font-size: 11px; }
     .msg-event-card.kick .ev-title { color: #6ee7b7; }
     .msg-event-card.tiktok .ev-title { color: #f472b6; }
     .msg-event-card.twitch .ev-title { color: #d8b4fe; }
     .msg-event-card.youtube .ev-title { color: #fca5a5; }
 
-    .ev-time { font-size: 10px; color: var(--text-dim); }
-    .ev-desc { font-size: 11px; color: #d4d4d8; line-height: 1.3; }
+    .ev-time { font-size: 9px; color: var(--text-dim); }
+    .ev-desc { font-size: 10px; color: #cbd5e1; line-height: 1.25; }
     .ev-desc strong { color: #fff; }
 
     /* Footer del Feed */
     .hud-footer {
-      background: var(--bg-darkest);
+      background: #0d0e12;
       border-top: 1px solid var(--border-subtle);
-      padding: 4px 10px;
+      padding: 3px 8px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-dim);
       flex-shrink: 0;
     }
 
-    .hud-footer-left {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .dot-status-server { width: 6px; height: 6px; border-radius: 50%; background: #10b981; }
+    .hud-footer-left { display: flex; align-items: center; gap: 4px; }
+    .dot-status-server { width: 5px; height: 5px; border-radius: 50%; background: #10b981; }
 
     #btn-scroll-down {
       position: absolute;
-      bottom: 35px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
       background: #2563eb;
       color: #fff;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 10px;
       font-weight: 600;
       border: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
       cursor: pointer;
       display: none;
       z-index: 20;
     }
 
     /* ======================================================== */
-    /* VISTA 2: EDITOR DE SONIDOS (Del Boceto)                  */
+    /* VISTA 2: PANEL DE PRUEBAS DE CHAT Y ALERTAS              */
+    /* ======================================================== */
+    #view-tester {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 10px;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .btn-test {
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: #171822;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s;
+    }
+    .btn-test:hover { background: #232534; color: #fff; }
+    .btn-test.kick { border-left: 3px solid var(--color-kick); }
+    .btn-test.tiktok { border-left: 3px solid var(--color-tiktok); }
+    .btn-test.twitch { border-left: 3px solid var(--color-twitch); }
+    .btn-test.youtube { border-left: 3px solid var(--color-youtube); }
+
+    .test-custom-chat {
+      background: #101117;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* ======================================================== */
+    /* VISTA 3: EDITOR DE SONIDOS                               */
     /* ======================================================== */
     #view-sounds {
       flex: 1;
       display: none;
       flex-direction: column;
-      padding: 12px 14px;
+      padding: 10px;
       overflow-y: auto;
       background: var(--bg-surface);
-      gap: 12px;
+      gap: 8px;
     }
 
-    .sounds-header h2 { font-size: 15px; font-weight: 700; color: #fff; }
-    .sounds-header p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-    /* Plataformas Tabs para Sonidos */
     .plat-tabs-row {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       border-bottom: 1px solid var(--border-subtle);
-      padding-bottom: 8px;
+      padding-bottom: 6px;
     }
 
     .plat-tab-btn {
-      padding: 5px 12px;
-      border-radius: 8px;
-      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 10px;
       font-weight: 700;
       cursor: pointer;
       border: 1px solid transparent;
@@ -445,20 +501,19 @@
       transition: all 0.15s;
     }
     .plat-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
-    .plat-tab-btn.active.kick { background: rgba(83,252,24,0.15); color: #53FC18; border-color: rgba(83,252,24,0.4); }
-    .plat-tab-btn.active.tiktok { background: rgba(254,9,121,0.15); color: #fe0979; border-color: rgba(254,9,121,0.4); }
-    .plat-tab-btn.active.twitch { background: rgba(145,70,255,0.15); color: #c084fc; border-color: rgba(145,70,255,0.4); }
-    .plat-tab-btn.active.youtube { background: rgba(255,0,0,0.15); color: #f87171; border-color: rgba(255,0,0,0.4); }
+    .plat-tab-btn.active.kick { background: rgba(83,252,24,0.15); color: #53FC18; border-color: rgba(83,252,24,0.3); }
+    .plat-tab-btn.active.tiktok { background: rgba(254,9,121,0.15); color: #fe0979; border-color: rgba(254,9,121,0.3); }
+    .plat-tab-btn.active.twitch { background: rgba(145,70,255,0.15); color: #c084fc; border-color: rgba(145,70,255,0.3); }
+    .plat-tab-btn.active.youtube { background: rgba(255,0,0,0.15); color: #f87171; border-color: rgba(255,0,0,0.3); }
 
-    /* Filas de eventos */
     .event-sound-item {
-      background: var(--bg-darkest);
+      background: #0f1015;
       border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 12px;
+      border-radius: 6px;
+      padding: 6px 8px;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
     .es-top {
@@ -467,37 +522,23 @@
       justify-content: space-between;
     }
 
-    .es-title { font-size: 12px; font-weight: 700; color: #fff; }
-    .es-file-info { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
-    .es-file-info code { background: #27272a; padding: 1px 4px; border-radius: 3px; color: #e4e4e7; }
+    .es-title { font-size: 11px; font-weight: 700; color: #fff; }
+    .es-file-info { font-size: 9px; color: var(--text-dim); }
+    .es-file-info code { background: #262836; padding: 1px 3px; border-radius: 3px; color: #e2e8f0; }
 
     .es-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
     }
 
-    .es-vol {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-      color: var(--text-muted);
-    }
-    .es-vol input[type="range"] {
-      width: 65px;
-      height: 18px;
-      accent-color: #10b981;
-      cursor: pointer;
-    }
-
     .btn-act {
-      background: #27272a;
-      border: 1px solid #3f3f46;
-      color: #e4e4e7;
-      padding: 4px 8px;
-      border-radius: 5px;
+      background: #232532;
+      border: 1px solid #36394c;
+      color: #e2e8f0;
+      padding: 3px 6px;
+      border-radius: 4px;
       font-size: 10px;
       font-weight: 600;
       cursor: pointer;
@@ -506,233 +547,309 @@
       gap: 3px;
       transition: all 0.15s;
     }
-    .btn-act:hover { background: #3f3f46; color: #fff; }
-    .btn-act.primary { background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
-    .btn-act.primary:hover { background: rgba(37,99,235,0.3); }
+    .btn-act:hover { background: #313547; color: #fff; }
+    .btn-act.primary { background: rgba(37,99,235,0.25); border-color: rgba(37,99,235,0.4); color: #60a5fa; }
+    .btn-act.primary:hover { background: rgba(37,99,235,0.35); }
 
     /* ======================================================== */
-    /* VISTA 3: CONFIGURACIÓN DE CANALES                      */
+    /* VISTA 4: CONFIGURACIÓN DE CANALES                      */
     /* ======================================================== */
     #view-channels {
       flex: 1;
       display: none;
       flex-direction: column;
-      padding: 14px;
+      padding: 12px;
       overflow-y: auto;
       background: var(--bg-surface);
-      gap: 12px;
-      max-width: 500px;
-      margin: 0 auto;
-      width: 100%;
+      gap: 10px;
     }
 
-    .form-box {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .form-box label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
+    .form-box { display: flex; flex-direction: column; gap: 3px; }
+    .form-box label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
     .form-box input {
-      background: var(--bg-darkest);
+      background: #0f1015;
       border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 8px 10px;
+      border-radius: 5px;
+      padding: 6px 8px;
       color: #fff;
-      font-size: 12px;
+      font-size: 11px;
       outline: none;
     }
     .form-box input:focus { border-color: #6366f1; }
 
-    /* Input oculto de archivos */
     #sound-file-picker { display: none; }
   </style>
 </head>
 <body>
 
-  <!-- Navegación Superior: Pestañas Principales -->
-  <div class="nav-bar">
-    <div class="nav-tabs">
-      <button class="nav-btn active" id="btn-tab-dock" onclick="switchMainView('dock')">
-        <span>🖥️</span> Vista Dock
-      </button>
-      <button class="nav-btn" id="btn-tab-sounds" onclick="switchMainView('sounds')">
-        <span>🔔</span> Editor de Sonidos
-      </button>
-      <button class="nav-btn" id="btn-tab-channels" onclick="switchMainView('channels')">
-        <span>📡</span> Canales
-      </button>
+  <!-- Contenedor Compacto de Dock -->
+  <div id="dock-container">
+
+    <!-- Navegación Superior -->
+    <div class="nav-bar">
+      <div class="nav-tabs">
+        <button class="nav-btn active" id="btn-tab-dock" onclick="switchMainView('dock')">
+          <span>💬</span> Chat
+        </button>
+        <button class="nav-btn" id="btn-tab-tester" onclick="switchMainView('tester')">
+          <span>🎮</span> Pruebas
+        </button>
+        <button class="nav-btn" id="btn-tab-sounds" onclick="switchMainView('sounds')">
+          <span>🔔</span> Sonidos
+        </button>
+        <button class="nav-btn" id="btn-tab-channels" onclick="switchMainView('channels')">
+          <span>📡</span> Canales
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn-icon-nav active" id="btn-toggle-sound" onclick="toggleMute()" title="Sonidos de alerta (ON/OFF)">🔊</button>
+      </div>
     </div>
 
-    <div class="nav-actions">
-      <button class="btn-icon-nav active" id="btn-toggle-sound" onclick="toggleMute()" title="Sonidos de alerta (ON/OFF)">🔊</button>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
-  <!-- VISTA 1: DOCK DE OBS (Chat + Viewers + Notificaciones)   -->
-  <!-- ======================================================== -->
-  <div id="view-dock">
-    
-    <!-- Top HUD: Viewers en Vivo -->
-    <div class="hud-header">
-      <div class="hud-title-row">
-        <div class="hud-title-left">
-          <span class="hud-title">MultiChat Live</span>
-          <span class="badge-live">● EN VIVO</span>
+    <!-- ======================================================== -->
+    <!-- VISTA 1: DOCK DE OBS (Chat + Viewers + Notificaciones)   -->
+    <!-- ======================================================== -->
+    <div id="view-dock">
+      
+      <!-- Top HUD: Viewers en Vivo -->
+      <div class="hud-header">
+        <div class="hud-title-row">
+          <div class="hud-title-left">
+            <span class="hud-title">MultiChat Live</span>
+            <span class="badge-live">● EN VIVO</span>
+          </div>
+          
+          <div class="badge-total-viewers">
+            <span>👥 Total:</span>
+            <strong id="count-total">0</strong>
+          </div>
         </div>
-        
-        <div class="badge-total-viewers">
-          <span>👥 Total:</span>
-          <strong id="count-total">0</strong>
+
+        <!-- 4 Plataformas en fila compacta -->
+        <div class="viewers-grid">
+          <!-- Twitch -->
+          <div class="v-card" title="Espectadores Twitch">
+            <div class="v-plat">
+              <span class="v-dot twitch" id="dot-twitch"></span>
+              <span style="color:#c084fc">Twitch</span>
+            </div>
+            <span class="v-num" id="count-twitch">0</span>
+          </div>
+
+          <!-- Kick -->
+          <div class="v-card" title="Espectadores Kick">
+            <div class="v-plat">
+              <span class="v-dot kick" id="dot-kick"></span>
+              <span style="color:#53FC18">Kick</span>
+            </div>
+            <span class="v-num" id="count-kick">0</span>
+          </div>
+
+          <!-- TikTok -->
+          <div class="v-card" title="Espectadores TikTok">
+            <div class="v-plat">
+              <span class="v-dot tiktok" id="dot-tiktok"></span>
+              <span style="color:#fe0979">TikTok</span>
+            </div>
+            <span class="v-num" id="count-tiktok">0</span>
+          </div>
+
+          <!-- YouTube -->
+          <div class="v-card" title="Espectadores YouTube">
+            <div class="v-plat">
+              <span class="v-dot youtube" id="dot-youtube"></span>
+              <span style="color:#f87171">YouTube</span>
+            </div>
+            <span class="v-num" id="count-youtube">0</span>
+          </div>
+        </div>
+
+        <!-- Filtros Rápidos -->
+        <div class="filter-row">
+          <div class="filter-btns">
+            <button class="f-btn active" id="f-all" onclick="applyFeedFilter('all')">Todos</button>
+            <button class="f-btn" id="f-chat" onclick="applyFeedFilter('chat')">Solo Chat</button>
+            <button class="f-btn" id="f-events" onclick="applyFeedFilter('events')">Solo Alertas</button>
+          </div>
+
+          <button class="btn-clear-feed" onclick="clearFeed()" title="Limpiar feed">
+            <svg style="width:12px;height:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
         </div>
       </div>
 
-      <!-- Barra de 4 Plataformas -->
-      <div class="viewers-grid">
-        <!-- Twitch -->
-        <div class="v-card" title="Espectadores Twitch">
-          <div class="v-plat">
-            <span class="v-dot twitch" id="dot-twitch"></span>
-            <span style="color:#c084fc">Twitch</span>
+      <!-- Feed Denso de Chat y Alertas -->
+      <div id="chat-stream">
+        <div class="msg-event-card kick" style="margin-top:2px;">
+          <div class="ev-header">
+            <div class="ev-title-wrap">
+              <span class="platform-badge badge-kick">KICK</span>
+              <span class="ev-title">MultiChat Conectado</span>
+            </div>
+            <span class="ev-time">ahora</span>
           </div>
-          <span class="v-num" id="count-twitch">0</span>
-        </div>
-
-        <!-- Kick -->
-        <div class="v-card" title="Espectadores Kick">
-          <div class="v-plat">
-            <span class="v-dot kick" id="dot-kick"></span>
-            <span style="color:#53FC18">Kick</span>
-          </div>
-          <span class="v-num" id="count-kick">0</span>
-        </div>
-
-        <!-- TikTok -->
-        <div class="v-card" title="Espectadores TikTok">
-          <div class="v-plat">
-            <span class="v-dot tiktok" id="dot-tiktok"></span>
-            <span style="color:#fe0979">TikTok</span>
-          </div>
-          <span class="v-num" id="count-tiktok">0</span>
-        </div>
-
-        <!-- YouTube -->
-        <div class="v-card" title="Espectadores YouTube">
-          <div class="v-plat">
-            <span class="v-dot youtube" id="dot-youtube"></span>
-            <span style="color:#f87171">YouTube</span>
-          </div>
-          <span class="v-num" id="count-youtube">0</span>
+          <div class="ev-desc">Monitoreando Kick, TikTok, Twitch y YouTube...</div>
         </div>
       </div>
 
-      <!-- Filtros Rápidos (Todos, Solo Chat, Solo Alertas) -->
-      <div class="filter-row">
-        <div class="filter-btns">
-          <button class="f-btn active" id="f-all" onclick="applyFeedFilter('all')">Todos</button>
-          <button class="f-btn" id="f-chat" onclick="applyFeedFilter('chat')">Solo Chat</button>
-          <button class="f-btn" id="f-events" onclick="applyFeedFilter('events')">Solo Alertas</button>
-        </div>
+      <button id="btn-scroll-down" onclick="scrollToBottom(true)">↓ Nuevos mensajes</button>
 
-        <button class="btn-clear-feed" onclick="clearFeed()" title="Limpiar feed">
-          <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      <!-- Barra de Estado Inferior -->
+      <div class="hud-footer">
+        <div class="hud-footer-left">
+          <span class="dot-status-server" id="server-status-dot"></span>
+          <span id="server-status-text">Conectado</span>
+        </div>
+        <div id="sound-status-text">🔊 Sonidos ON</div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VISTA 2: PANEL DE PRUEBAS DE CHAT Y ALERTAS              -->
+    <!-- ======================================================== -->
+    <div id="view-tester">
+      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:4px;">
+        <h3 style="font-size:12px; font-weight:700; color:#fff;">🎮 Simulador de Pruebas en Vivo</h3>
+        <p style="font-size:10px; color:var(--text-muted);">Dispara mensajes y alertas al instante para verificar el dock y sonido:</p>
+      </div>
+
+      <!-- Pruebas de Mensajes de Chat -->
+      <div class="section-title">💬 Probar Mensajes de Chat</div>
+      <div class="test-grid">
+        <button class="btn-test kick" onclick="sendTestChat('kick')">
+          <span>🟢 Kick Chat</span>
+          <span style="font-size:9px; color:var(--text-dim);">Simular</span>
+        </button>
+        <button class="btn-test tiktok" onclick="sendTestChat('tiktok')">
+          <span>📱 TikTok Chat</span>
+          <span style="font-size:9px; color:var(--text-dim);">Simular</span>
+        </button>
+        <button class="btn-test twitch" onclick="sendTestChat('twitch')">
+          <span>🟣 Twitch Chat</span>
+          <span style="font-size:9px; color:var(--text-dim);">Simular</span>
+        </button>
+        <button class="btn-test youtube" onclick="sendTestChat('youtube')">
+          <span>🔴 YouTube Chat</span>
+          <span style="font-size:9px; color:var(--text-dim);">Simular</span>
+        </button>
+      </div>
+
+      <!-- Mensaje personalizado -->
+      <div class="test-custom-chat">
+        <div style="font-size:10px; font-weight:700; color:#cbd5e1;">✍️ Enviar mensaje de prueba con tu texto:</div>
+        <div style="display:flex; gap:4px;">
+          <select id="inp-test-plat" style="background:#171822; border:1px solid var(--border-subtle); color:#fff; border-radius:4px; font-size:10px; padding:3px 5px;">
+            <option value="kick">Kick</option>
+            <option value="tiktok">TikTok</option>
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+          </select>
+          <input type="text" id="inp-test-msg" placeholder="Escribe algo aquí..." style="flex:1; background:#171822; border:1px solid var(--border-subtle); color:#fff; border-radius:4px; padding:3px 6px; font-size:11px;">
+          <button class="btn-act primary" onclick="sendCustomTestChat()">Enviar</button>
+        </div>
+      </div>
+
+      <!-- Pruebas de Alertas con Sonido -->
+      <div class="section-title" style="margin-top:4px;">🔔 Probar Alertas con Sonido</div>
+      <div class="test-grid">
+        <button class="btn-test kick" onclick="sendTestAlert('kick', 'sub')">
+          <span>⭐ Sub en Kick</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test kick" onclick="sendTestAlert('kick', 'follow')">
+          <span>🟢 Follow Kick</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test tiktok" onclick="sendTestAlert('tiktok', 'gift')">
+          <span>🎁 Regalo TikTok</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test tiktok" onclick="sendTestAlert('tiktok', 'follow')">
+          <span>💖 Follow TikTok</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test twitch" onclick="sendTestAlert('twitch', 'sub')">
+          <span>🟣 Sub Twitch</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test twitch" onclick="sendTestAlert('twitch', 'raid')">
+          <span>🚀 Raid Twitch</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test youtube" onclick="sendTestAlert('youtube', 'superchat')">
+          <span>💰 SuperChat $10</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
+        </button>
+        <button class="btn-test youtube" onclick="sendTestAlert('youtube', 'sub')">
+          <span>🔴 Sub YouTube</span>
+          <span style="font-size:9px; color:var(--text-dim);">Sonido ▶</span>
         </button>
       </div>
     </div>
 
-    <!-- Feed de Mensajes y Eventos -->
-    <div id="chat-stream">
-      <div class="msg-event-card kick" style="margin-top:2px;">
-        <div class="ev-header">
-          <div class="ev-title-wrap">
-            <span class="platform-badge badge-kick">KICK</span>
-            <span class="ev-title">MultiChat Iniciado</span>
-          </div>
-          <span class="ev-time">ahora</span>
-        </div>
-        <div class="ev-desc">Conectando canales de Kick, TikTok, Twitch y YouTube...</div>
+    <!-- ======================================================== -->
+    <!-- VISTA 3: EDITOR DE SONIDOS                               -->
+    <!-- ======================================================== -->
+    <div id="view-sounds">
+      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:4px;">
+        <h3 style="font-size:12px; font-weight:700; color:#fff;">🔔 Configuración de Sonidos</h3>
+        <p style="font-size:10px; color:var(--text-muted);">Personaliza los sonidos y volúmenes de cada evento:</p>
+      </div>
+
+      <div class="plat-tabs-row">
+        <button class="plat-tab-btn active kick" id="ptab-kick" onclick="switchSoundPlatform('kick')">🟢 Kick</button>
+        <button class="plat-tab-btn tiktok" id="ptab-tiktok" onclick="switchSoundPlatform('tiktok')">📱 TikTok</button>
+        <button class="plat-tab-btn twitch" id="ptab-twitch" onclick="switchSoundPlatform('twitch')">🟣 Twitch</button>
+        <button class="plat-tab-btn youtube" id="ptab-youtube" onclick="switchSoundPlatform('youtube')">🔴 YouTube</button>
+      </div>
+
+      <div id="sound-events-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+        <button class="btn-act primary" style="padding:5px 12px; font-size:11px;" onclick="saveConfigToServer()">
+          💾 Guardar Sonidos
+        </button>
       </div>
     </div>
 
-    <button id="btn-scroll-down" onclick="scrollToBottom(true)">↓ Nuevos mensajes</button>
-
-    <!-- Barra de Estado Inferior -->
-    <div class="hud-footer">
-      <div class="hud-footer-left">
-        <span class="dot-status-server" id="server-status-dot"></span>
-        <span id="server-status-text">Conectado</span>
+    <!-- ======================================================== -->
+    <!-- VISTA 4: CONFIGURACIÓN DE CANALES                      -->
+    <!-- ======================================================== -->
+    <div id="view-channels">
+      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:4px;">
+        <h3 style="font-size:12px; font-weight:700; color:#fff;">📡 Canales de Transmisión</h3>
+        <p style="font-size:10px; color:var(--text-muted);">Guarda tus canales para conectar el chat en vivo:</p>
       </div>
-      <div id="sound-status-text">🔊 Sonidos ON</div>
-    </div>
-  </div>
 
-  <!-- ======================================================== -->
-  <!-- VISTA 2: EDITOR DE SONIDOS Y ALERTAS (Del Boceto)       -->
-  <!-- ======================================================== -->
-  <div id="view-sounds">
-    <div class="sounds-header">
-      <h2>🔔 Configuración de Sonidos y Alertas</h2>
-      <p>Personaliza los sonidos de cada evento. Puedes probarlos al instante, ajustar el volumen o subir un MP3/WAV propio.</p>
-    </div>
+      <div class="form-box">
+        <label style="color:#53FC18;">🟢 Kick Username:</label>
+        <input type="text" id="inp-kick" placeholder="ej. chamukoi">
+      </div>
 
-    <!-- Pestañas por Plataforma (Kick, TikTok, Twitch, YouTube) -->
-    <div class="plat-tabs-row">
-      <button class="plat-tab-btn active kick" id="ptab-kick" onclick="switchSoundPlatform('kick')">🟢 Kick</button>
-      <button class="plat-tab-btn tiktok" id="ptab-tiktok" onclick="switchSoundPlatform('tiktok')">📱 TikTok</button>
-      <button class="plat-tab-btn twitch" id="ptab-twitch" onclick="switchSoundPlatform('twitch')">🟣 Twitch</button>
-      <button class="plat-tab-btn youtube" id="ptab-youtube" onclick="switchSoundPlatform('youtube')">🔴 YouTube</button>
-    </div>
+      <div class="form-box">
+        <label style="color:#fe0979;">📱 TikTok Username:</label>
+        <input type="text" id="inp-tiktok" placeholder="ej. keviinluna_">
+      </div>
 
-    <!-- Lista de Eventos de la Plataforma Seleccionada -->
-    <div id="sound-events-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <div class="form-box">
+        <label style="color:#c084fc;">🟣 Twitch Username:</label>
+        <input type="text" id="inp-twitch" placeholder="ej. chamukop">
+      </div>
 
-    <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-      <button class="btn-act primary" style="padding:8px 14px; font-size:11px;" onclick="saveConfigToServer()">
-        💾 Guardar Configuración de Sonidos
-      </button>
-    </div>
-  </div>
+      <div class="form-box">
+        <label style="color:#f87171;">🔴 YouTube Handle:</label>
+        <input type="text" id="inp-youtube" placeholder="ej. @LofiGirl">
+      </div>
 
-  <!-- ======================================================== -->
-  <!-- VISTA 3: CONFIGURACIÓN DE CANALES                      -->
-  <!-- ======================================================== -->
-  <div id="view-channels">
-    <div class="sounds-header">
-      <h2>📡 Canales de Transmisión</h2>
-      <p>Configura tus usuarios. El sistema se conectará en vivo tanto en tu PC local como en AWS EC2:</p>
+      <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+        <button class="btn-act primary" style="padding:6px 14px; font-size:11px;" onclick="saveChannelsToServer()">
+          💾 Conectar y Guardar
+        </button>
+      </div>
     </div>
 
-    <div class="form-box">
-      <label style="color:#53FC18;">🟢 Kick Username:</label>
-      <input type="text" id="inp-kick" placeholder="ej. chamukoi">
-    </div>
-
-    <div class="form-box">
-      <label style="color:#fe0979;">📱 TikTok Username:</label>
-      <input type="text" id="inp-tiktok" placeholder="ej. keviinluna_">
-    </div>
-
-    <div class="form-box">
-      <label style="color:#c084fc;">🟣 Twitch Username:</label>
-      <input type="text" id="inp-twitch" placeholder="ej. chamukop">
-    </div>
-
-    <div class="form-box">
-      <label style="color:#f87171;">🔴 YouTube Handle / Channel:</label>
-      <input type="text" id="inp-youtube" placeholder="ej. @LofiGirl">
-    </div>
-
-    <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-      <button class="btn-act primary" style="padding:8px 16px; font-size:12px;" onclick="saveChannelsToServer()">
-        💾 Conectar y Guardar Canales
-      </button>
-    </div>
-  </div>
+  </div> <!-- Fin #dock-container -->
 
   <!-- Input Oculto de Archivos para Subir Audios -->
   <input type="file" id="sound-file-picker" accept="audio/*" onchange="uploadSelectedSound(event)">
@@ -745,7 +862,7 @@
     // 1. CONEXIÓN SOCKET.IO (Localhost y AWS)
     // ==========================================
     const socket = io(window.location.origin, {
-      reconnectionAttempts: 20,
+      reconnectionAttempts: 25,
       reconnectionDelay: 1500
     });
 
@@ -769,7 +886,7 @@
     const audioPlayer = document.getElementById('audio-player');
 
     // ==========================================
-    // 2. SINTETIZADOR WEB AUDIO API (Del Boceto)
+    // 2. SINTETIZADOR WEB AUDIO API
     // ==========================================
     let audioCtx = null;
     function getAudioContext() {
@@ -870,7 +987,82 @@
     }
 
     // ==========================================
-    // 3. DEFINICIÓN DE EVENTOS POR PLATAFORMA
+    // 3. CAMBIO DE VISTAS (Dock, Pruebas, Sonidos, Canales)
+    // ==========================================
+    function switchMainView(view) {
+      const vDock = document.getElementById('view-dock');
+      const vTester = document.getElementById('view-tester');
+      const vSounds = document.getElementById('view-sounds');
+      const vChannels = document.getElementById('view-channels');
+
+      const bDock = document.getElementById('btn-tab-dock');
+      const bTester = document.getElementById('btn-tab-tester');
+      const bSounds = document.getElementById('btn-tab-sounds');
+      const bChannels = document.getElementById('btn-tab-channels');
+
+      [bDock, bTester, bSounds, bChannels].forEach(b => b.classList.remove('active'));
+      vDock.style.display = 'none';
+      vTester.style.display = 'none';
+      vSounds.style.display = 'none';
+      vChannels.style.display = 'none';
+
+      if (view === 'dock') {
+        vDock.style.display = 'flex';
+        bDock.classList.add('active');
+      } else if (view === 'tester') {
+        vTester.style.display = 'flex';
+        bTester.classList.add('active');
+      } else if (view === 'sounds') {
+        vSounds.style.display = 'flex';
+        bSounds.classList.add('active');
+        renderSoundsList(activeSoundPlat);
+      } else if (view === 'channels') {
+        vChannels.style.display = 'flex';
+        bChannels.classList.add('active');
+        populateChannelInputs();
+      }
+    }
+
+    // ==========================================
+    // 4. SIMULADOR DE PRUEBAS DE CHAT Y ALERTAS
+    // ==========================================
+    function sendTestChat(platform) {
+      fetch('/api/test-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform })
+      }).then(() => {
+        switchMainView('dock');
+      });
+    }
+
+    function sendCustomTestChat() {
+      const plat = document.getElementById('inp-test-plat').value;
+      const msg = document.getElementById('inp-test-msg').value.trim();
+      if (!msg) return;
+
+      fetch('/api/test-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: plat, user: 'StreamerTest', message: msg })
+      }).then(() => {
+        document.getElementById('inp-test-msg').value = '';
+        switchMainView('dock');
+      });
+    }
+
+    function sendTestAlert(platform, type) {
+      fetch('/api/test-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, type })
+      }).then(() => {
+        switchMainView('dock');
+      });
+    }
+
+    // ==========================================
+    // 5. EDITOR DE SONIDOS
     // ==========================================
     const PLATFORM_EVENTS = {
       kick: [
@@ -897,40 +1089,6 @@
       ]
     };
 
-    // ==========================================
-    // 4. CAMBIO DE VISTAS (Dock, Sonidos, Canales)
-    // ==========================================
-    function switchMainView(view) {
-      const vDock = document.getElementById('view-dock');
-      const vSounds = document.getElementById('view-sounds');
-      const vChannels = document.getElementById('view-channels');
-
-      const bDock = document.getElementById('btn-tab-dock');
-      const bSounds = document.getElementById('btn-tab-sounds');
-      const bChannels = document.getElementById('btn-tab-channels');
-
-      [bDock, bSounds, bChannels].forEach(b => b.classList.remove('active'));
-      vDock.style.display = 'none';
-      vSounds.style.display = 'none';
-      vChannels.style.display = 'none';
-
-      if (view === 'dock') {
-        vDock.style.display = 'flex';
-        bDock.classList.add('active');
-      } else if (view === 'sounds') {
-        vSounds.style.display = 'flex';
-        bSounds.classList.add('active');
-        renderSoundsList(activeSoundPlat);
-      } else if (view === 'channels') {
-        vChannels.style.display = 'flex';
-        bChannels.classList.add('active');
-        populateChannelInputs();
-      }
-    }
-
-    // ==========================================
-    // 5. EDITOR DE SONIDOS (Del Boceto)
-    // ==========================================
     function switchSoundPlatform(plat) {
       activeSoundPlat = plat;
       ['kick', 'tiktok', 'twitch', 'youtube'].forEach(p => {
@@ -962,7 +1120,7 @@
             </div>
 
             <div class="es-controls">
-              <select onchange="setEventSound('${ev.key}', this.value)" style="background:#18181b; border:1px solid #3f3f46; color:#fff; border-radius:5px; padding:4px 6px; font-size:11px;">
+              <select onchange="setEventSound('${ev.key}', this.value)" style="background:#171822; border:1px solid #333648; color:#fff; border-radius:4px; padding:3px 5px; font-size:10px;">
                 <option value="default" ${soundSrc==='default'?'selected':''}>🔔 Predeterminado (Automático)</option>
                 <option value="chime" ${soundSrc==='chime'?'selected':''}>✨ Chime Cristalino</option>
                 <option value="fanfare" ${soundSrc==='fanfare'?'selected':''}>🎺 Fanfarria Triunfal</option>
@@ -974,10 +1132,10 @@
 
               <button class="btn-act primary" onclick="openFilePicker('${ev.key}')">📂 Subir MP3</button>
 
-              <div class="es-vol" style="margin-left:auto;">
+              <div style="display:flex; align-items:center; gap:3px; margin-left:auto; font-size:10px; color:var(--text-muted);">
                 <span>Vol:</span>
-                <input type="range" min="0" max="100" value="${vol}" onchange="setEventVolume('${ev.key}', this.value)" oninput="this.nextElementSibling.innerText = this.value + '%'">
-                <span style="width:28px; text-align:right; font-weight:600;">${vol}%</span>
+                <input type="range" min="0" max="100" value="${vol}" onchange="setEventVolume('${ev.key}', this.value)" oninput="this.nextElementSibling.innerText = this.value + '%'" style="width:55px; height:16px; accent-color:#10b981; cursor:pointer;">
+                <span style="width:24px; text-align:right; font-weight:700;">${vol}%</span>
               </div>
             </div>
           </div>
@@ -1042,6 +1200,9 @@
       });
     }
 
+    // ==========================================
+    // 6. CANALES
+    // ==========================================
     function populateChannelInputs() {
       document.getElementById('inp-kick').value = config.kickUsername || '';
       document.getElementById('inp-tiktok').value = config.tiktokUsername || '';
@@ -1083,7 +1244,7 @@
     }
 
     // ==========================================
-    // 6. EVENTOS DE CHAT Y ALERTAS (Socket.IO)
+    // 7. SOCKET.IO CHAT Y ALERTAS
     // ==========================================
     socket.on('connect', () => {
       document.getElementById('server-status-dot').style.background = '#10b981';
@@ -1131,7 +1292,7 @@
 
       div.innerHTML = `
         <span class="platform-badge ${badgeClass}">${plat}</span>
-        <div style="line-height:1.35;">
+        <div style="line-height:1.3;">
           <span class="user-name ${plat}">${user}:</span>
           <span class="msg-body">${text}</span>
         </div>
@@ -1188,7 +1349,7 @@
 
     // AutoScroll
     chatStream.addEventListener('scroll', () => {
-      const isAtBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 35;
+      const isAtBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 30;
       autoScroll = isAtBottom;
       if (autoScroll) scrollDownBtn.style.display = 'none';
     });

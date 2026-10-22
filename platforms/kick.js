@@ -1,5 +1,6 @@
 module.exports = function createPlatform(context) {
   const { state, io, broadcastStatus, broadcastViewers, saveConfig, dispatchAlert, getDeterministicColor, execFile, TikTokLiveConnection, RouteConfig, tmi, getConfig, logPollError } = context;
+const WebSocket = global.WebSocket || require('ws');
 const kickChannelCache = {};
 // OBTENER DATOS DE CANAL KICK (Bypass Cloudflare + Caché de Respaldo)
 // -------------------------------------------------------------
