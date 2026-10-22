@@ -575,7 +575,47 @@
       font-size: 11px;
       outline: none;
     }
-    .form-box input:focus { border-color: #6366f1; }
+    /* ======================================================== */
+    /* VISTA 5: ENLACES OBS                                     */
+    /* ======================================================== */
+    #view-obs {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 10px;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      gap: 8px;
+    }
+
+    .obs-card {
+      background: #0f1015;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .obs-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .obs-input {
+      flex: 1;
+      background: #171822;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 4px 6px;
+      color: #93c5fd;
+      font-size: 10px;
+      font-family: monospace;
+      outline: none;
+    }
 
     #sound-file-picker { display: none; }
   </style>
@@ -599,6 +639,9 @@
         </button>
         <button class="nav-btn" id="btn-tab-channels" onclick="switchMainView('channels')">
           <span>📡</span> Canales
+        </button>
+        <button class="nav-btn" id="btn-tab-obs" onclick="switchMainView('obs')">
+          <span>🔗</span> OBS
         </button>
       </div>
 
@@ -848,6 +891,63 @@
         </button>
       </div>
     </div>
+    <!-- ======================================================== -->
+    <!-- VISTA 5: ENLACES OBS (Para OBS Studio)                   -->
+    <!-- ======================================================== -->
+    <div id="view-obs">
+      <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:4px;">
+        <h3 style="font-size:12px; font-weight:700; color:#fff;">🔗 Enlaces para OBS Studio</h3>
+        <p style="font-size:10px; color:var(--text-muted);">Copia los enlaces con 1 clic para usarlos en OBS:</p>
+      </div>
+
+      <!-- Tarjeta 1: Dock de OBS -->
+      <div class="obs-card">
+        <div class="obs-card-header">
+          <span style="font-weight:700; color:#fff;">📌 MultiChat Dock (Panel Lateral)</span>
+          <span style="font-size:9px; background:rgba(16,185,129,0.2); color:#10b981; padding:1px 5px; border-radius:3px; font-weight:700;">Recomendado</span>
+        </div>
+        <p style="font-size:10px; color:var(--text-muted);">Para leer el chat, ver los viewers y alertas dentro de la ventana de OBS.</p>
+        <div style="display:flex; gap:4px; margin-top:3px;">
+          <input type="text" id="url-obs-dock" readonly class="obs-input">
+          <button class="btn-act primary" onclick="copyObsUrl('url-obs-dock', this)">📋 Copiar</button>
+        </div>
+        <div style="font-size:9px; color:var(--text-dim); margin-top:2px;">
+          💡 En OBS: <strong>Docks (Paneles)</strong> &gt; <strong>Paneles de explorador personalizados</strong> &gt; Pega esta URL.
+        </div>
+      </div>
+
+      <!-- Tarjeta 2: Alertas en Pantalla -->
+      <div class="obs-card">
+        <div class="obs-card-header">
+          <span style="font-weight:700; color:#fff;">🎬 Alertas en Pantalla (Overlay de Eventos)</span>
+          <span style="font-size:9px; color:var(--text-dim); font-family:monospace;">800 x 400</span>
+        </div>
+        <p style="font-size:10px; color:var(--text-muted);">Animación transparente sobre tu juego cuando hay un nuevo Follow, Sub, etc.</p>
+        <div style="display:flex; gap:4px; margin-top:3px;">
+          <input type="text" id="url-obs-alerts" readonly class="obs-input">
+          <button class="btn-act primary" onclick="copyObsUrl('url-obs-alerts', this)">📋 Copiar</button>
+        </div>
+        <div style="font-size:9px; color:var(--text-dim); margin-top:2px;">
+          💡 En OBS: <strong>Fuentes (+)</strong> &gt; <strong>Navegador</strong> &gt; Pega esta URL.
+        </div>
+      </div>
+
+      <!-- Tarjeta 3: Chat en Pantalla -->
+      <div class="obs-card">
+        <div class="obs-card-header">
+          <span style="font-weight:700; color:#fff;">💬 Chat en Pantalla (Overlay Transparente)</span>
+          <span style="font-size:9px; color:var(--text-dim); font-family:monospace;">400 x 600</span>
+        </div>
+        <p style="font-size:10px; color:var(--text-muted);">Muestra el chat flotando sobre tu transmisión en vivo.</p>
+        <div style="display:flex; gap:4px; margin-top:3px;">
+          <input type="text" id="url-obs-chat" readonly class="obs-input">
+          <button class="btn-act primary" onclick="copyObsUrl('url-obs-chat', this)">📋 Copiar</button>
+        </div>
+        <div style="font-size:9px; color:var(--text-dim); margin-top:2px;">
+          💡 En OBS: <strong>Fuentes (+)</strong> &gt; <strong>Navegador</strong> &gt; Pega esta URL.
+        </div>
+      </div>
+    </div>
 
   </div> <!-- Fin #dock-container -->
 
@@ -994,17 +1094,20 @@
       const vTester = document.getElementById('view-tester');
       const vSounds = document.getElementById('view-sounds');
       const vChannels = document.getElementById('view-channels');
+      const vObs = document.getElementById('view-obs');
 
       const bDock = document.getElementById('btn-tab-dock');
       const bTester = document.getElementById('btn-tab-tester');
       const bSounds = document.getElementById('btn-tab-sounds');
       const bChannels = document.getElementById('btn-tab-channels');
+      const bObs = document.getElementById('btn-tab-obs');
 
-      [bDock, bTester, bSounds, bChannels].forEach(b => b.classList.remove('active'));
-      vDock.style.display = 'none';
-      vTester.style.display = 'none';
-      vSounds.style.display = 'none';
-      vChannels.style.display = 'none';
+      [bDock, bTester, bSounds, bChannels, bObs].forEach(b => { if (b) b.classList.remove('active'); });
+      if (vDock) vDock.style.display = 'none';
+      if (vTester) vTester.style.display = 'none';
+      if (vSounds) vSounds.style.display = 'none';
+      if (vChannels) vChannels.style.display = 'none';
+      if (vObs) vObs.style.display = 'none';
 
       if (view === 'dock') {
         vDock.style.display = 'flex';
@@ -1020,7 +1123,42 @@
         vChannels.style.display = 'flex';
         bChannels.classList.add('active');
         populateChannelInputs();
+      } else if (view === 'obs') {
+        vObs.style.display = 'flex';
+        bObs.classList.add('active');
+        updateObsUrls();
       }
+    }
+
+    function updateObsUrls() {
+      const origin = window.location.origin;
+      const elDock = document.getElementById('url-obs-dock');
+      const elAlerts = document.getElementById('url-obs-alerts');
+      const elChat = document.getElementById('url-obs-chat');
+      if (elDock) elDock.value = origin + '/dock.html';
+      if (elAlerts) elAlerts.value = origin + '/alerts.html';
+      if (elChat) elChat.value = origin + '/chat.html';
+    }
+
+    function copyObsUrl(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        const origText = btn.innerHTML;
+        btn.innerHTML = '✓ ¡Copiado!';
+        btn.style.background = '#10b981';
+        btn.style.color = '#fff';
+        setTimeout(() => {
+          btn.innerHTML = origText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 1800);
+      }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        btn.innerHTML = '✓ ¡Copiado!';
+        setTimeout(() => { btn.innerHTML = '📋 Copiar'; }, 1800);
+      });
     }
 
     // ==========================================
