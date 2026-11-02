@@ -1,6 +1,7 @@
 module.exports = function createPlatform(context) {
   const { state, io, broadcastStatus, broadcastViewers, saveConfig, dispatchAlert, getDeterministicColor, execFile, TikTokLiveConnection, RouteConfig, tmi, getConfig, logPollError } = context;
-const WebSocket = global.WebSocket || require('ws');
+const WebSocket = require('ws');
+const crypto = require('crypto');
 const kickChannelCache = {};
 // OBTENER DATOS DE CANAL KICK (Bypass Cloudflare + Caché de Respaldo)
 // -------------------------------------------------------------
@@ -58,11 +59,71 @@ function fetchKickChannelData(username) {
 }
 
 // -------------------------------------------------------------
-// CONECTOR DE KICK (Pusher WebSocket)
 // -------------------------------------------------------------
-const KICK_PUSHER_KEY = '32cbd69e4b950bf97679';
-const KICK_CLUSTER = 'us2';
+// OBTENER TOKEN DE AUTENTICACIÓN CENTRIFUGO DE KICK
+// -------------------------------------------------------------
+function fetchRealtimeToken(clientId) {
+  const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+  return new Promise((resolve, reject) => {
+    execFile(curlCmd, [
+      '-s', '-L', '--max-time', '8',
+      'https://web.kick.com/api/v1/realtime/auth/connection',
+      '-X', 'POST',
+      '-H', 'Content-Type: application/json',
+      '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      '-d', JSON.stringify({ client_id: clientId })
+    ], (err, stdout) => {
+      if (!err && stdout) {
+        try {
+          const d = JSON.parse(stdout);
+          if (d && d.data && d.data.token) return resolve(d.data.token);
+        } catch (_) {}
+      }
 
+      fetch('https://web.kick.com/api/v1/realtime/auth/connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        },
+        body: JSON.stringify({ client_id: clientId })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.data && d.data.token) return resolve(d.data.token);
+        throw new Error('No token en respuesta de Kick Centrifugo');
+      })
+      .catch(e => reject(err || e));
+    });
+  });
+}
+
+// Extrae eventos empaquetados en payloads de Centrifugo
+function extractCentrifugoEvents(parsed) {
+  const events = [];
+
+  function inspectPub(pub) {
+    if (!pub) return;
+    let pubData = pub.data;
+    if (typeof pubData === 'string') {
+      try { pubData = JSON.parse(pubData); } catch (_) {}
+    }
+    if (pubData && (pubData.event || pubData.data)) {
+      events.push(pubData);
+    }
+  }
+
+  if (parsed.pub) inspectPub(parsed.pub);
+  if (parsed.push && parsed.push.pub) inspectPub(parsed.push.pub);
+  if (parsed.publications && Array.isArray(parsed.publications)) parsed.publications.forEach(inspectPub);
+  if (parsed.event && parsed.data) events.push(parsed);
+
+  return events;
+}
+
+// -------------------------------------------------------------
+// CONECTOR DE KICK (Centrifugo WebSocket v2)
+// -------------------------------------------------------------
 async function connectKick(username) {
   if (!username) return;
   username = username.trim().toLowerCase();
@@ -89,7 +150,6 @@ async function connectKick(username) {
       }
     }
 
-    // Si mientras esperábamos la respuesta HTTP el usuario cambió o desconectó el canal, abortar
     if (state.kick.username !== username) return;
 
     const chatroomId = data.chatroom?.id || data.id;
@@ -102,7 +162,6 @@ async function connectKick(username) {
     state.kick.channelId = channelId;
     state.kick.chatroomId = chatroomId;
 
-    // Guardar en caché en memoria y en config persistente
     kickChannelCache[username] = { channelId, chatroomId };
     if (!getConfig().kickCache) getConfig().kickCache = {};
     if (!getConfig().kickCache[username] || getConfig().kickCache[username].chatroomId !== chatroomId) {
@@ -127,58 +186,89 @@ async function connectKick(username) {
     }
     broadcastViewers();
 
-    console.log(`[Kick] Conectando a Pusher para '${username}' (Chatroom: ${chatroomId}, Channel: ${channelId}, Viewers: ${state.kick.viewers})...`);
+    console.log(`[Kick] Obteniendo token Centrifugo en tiempo real...`);
+    const clientId = crypto.randomUUID ? crypto.randomUUID() : ('client-' + Date.now() + '-' + Math.random().toString(36).substring(2));
+    const token = await fetchRealtimeToken(clientId);
 
-    const wsUrl = `wss://ws-${KICK_CLUSTER}.pusher.com/app/${KICK_PUSHER_KEY}?protocol=7&client=js&version=8.4.0&flash=false`;
-    const ws = new WebSocket(wsUrl);
+    if (state.kick.username !== username) return;
+
+    console.log(`[Kick] Conectando a Centrifugo para '${username}' (Chatroom: ${chatroomId}, Channel: ${channelId}, Viewers: ${state.kick.viewers})...`);
+
+    const wsUrl = 'wss://realtime.us-east-1.platform.kick.com/connection/websocket';
+    const ws = new WebSocket(wsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Origin': 'https://kick.com'
+      }
+    });
     state.kick.ws = ws;
+
+    let cmdId = 1;
 
     ws.onopen = () => {
       if (state.kick.ws !== ws) return;
-      console.log(`[Kick] ✅ WebSocket conectado exitosamente a Pusher.`);
-
+      console.log(`[Kick] ✅ WebSocket abierto. Enviando autenticación Centrifugo...`);
       ws.send(JSON.stringify({
-        event: 'pusher:subscribe',
-        data: { auth: '', channel: `chatrooms.${chatroomId}.v2` }
+        id: cmdId++,
+        connect: { token }
       }));
-
-      ws.send(JSON.stringify({
-        event: 'pusher:subscribe',
-        data: { auth: '', channel: `channel.${channelId}` }
-      }));
-
-      if (state.kick.pingInterval) clearInterval(state.kick.pingInterval);
-      state.kick.pingInterval = setInterval(() => {
-        if (state.kick.ws === ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ event: 'pusher:ping', data: {} }));
-        }
-      }, 20000);
-
-      state.kick.connected = true;
-      state.kick.connecting = false;
-      state.kick.error = null;
-      broadcastStatus();
     };
 
     ws.onmessage = (event) => {
       if (state.kick.ws !== ws) return;
-      try {
-        const payload = JSON.parse(event.data);
-        handleKickEvent(payload);
-      } catch (err) {
-        console.error('[Kick] Error parseando mensaje WS:', err);
+      const raw = typeof event.data === 'string' ? event.data : event.data.toString();
+      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+      for (const line of lines) {
+        if (line === '{}') {
+          try { ws.send('{}'); } catch (_) {}
+          continue;
+        }
+
+        try {
+          const payload = JSON.parse(line);
+
+          if (payload.id === 1 && payload.connect) {
+            console.log(`[Kick] ✅ Conectado exitosamente a Centrifugo. Suscribiendo a chatroom ${chatroomId} y canal ${channelId}...`);
+            state.kick.connected = true;
+            state.kick.connecting = false;
+            state.kick.error = null;
+            broadcastStatus();
+
+            ws.send(JSON.stringify({
+              id: cmdId++,
+              subscribe: { channel: `chatrooms.${chatroomId}.v2` }
+            }));
+
+            ws.send(JSON.stringify({
+              id: cmdId++,
+              subscribe: { channel: `channel.${channelId}` }
+            }));
+
+            // Centrifugo server handles ping/pong heartbeat
+
+
+            continue;
+          }
+
+          const events = extractCentrifugoEvents(payload);
+          for (const ev of events) {
+            handleKickEvent(ev);
+          }
+        } catch (err) {
+          console.error('[Kick] Error parseando línea WS Centrifugo:', err.message, line);
+        }
       }
     };
 
     ws.onerror = (err) => {
       if (state.kick.ws !== ws) return;
-      console.error('[Kick] Error en WebSocket:', err.message || err);
+      console.error('[Kick] Error en WebSocket Centrifugo:', err.message || err);
     };
 
     ws.onclose = () => {
-      // Ignorar evento onclose si pertenece a un WebSocket anterior ya reemplazado
       if (state.kick.ws !== ws) return;
-      console.log('[Kick] WebSocket cerrado. Reintentando reconexión en segundo plano...');
+      console.log('[Kick] WebSocket Centrifugo cerrado. Reintentando reconexión en segundo plano...');
       if (state.kick.pingInterval) {
         clearInterval(state.kick.pingInterval);
         state.kick.pingInterval = null;

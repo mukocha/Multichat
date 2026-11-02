@@ -51,6 +51,19 @@
       position: relative;
     }
 
+    /* Ocultar de forma absoluta e incondicional cualquier input de archivo */
+    input[type="file"] {
+      display: none !important;
+      visibility: hidden !important;
+      position: absolute !important;
+      left: -9999px !important;
+      top: -9999px !important;
+      width: 0 !important;
+      height: 0 !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     /* Scrollbars ultra delgadas */
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.15); }

@@ -41,9 +41,10 @@ module.exports = function startAutoPolling(context) {
 
   // Polling para actualizar viewers y seguidores de Kick en vivo cada 15 segundos (evita bloqueo Cloudflare en Render)
   setInterval(async () => {
-    if (state.kick.username && state.kick.connected) {
+    const targetKick = state.kick.username || getConfig().kickUsername;
+    if (targetKick) {
       try {
-        const data = await fetchKickChannelData(state.kick.username);
+        const data = await fetchKickChannelData(targetKick);
         if (data) {
           // 1. Viewers y estado en directo
           if (data.livestream) {
@@ -165,9 +166,11 @@ module.exports = function startAutoPolling(context) {
 
   // Polling para actualizar viewers de YouTube en vivo cada 15 segundos
   setInterval(async () => {
-    if (state.youtube.username && state.youtube.connected) {
+    const targetYT = state.youtube.username || getConfig().youtubeChannel;
+    if (targetYT) {
       try {
-        const { viewers, isLive } = await fetchYouTubeViewers(state.youtube.username);
+        const { viewers, isLive } = await fetchYouTubeViewers(targetYT);
+        state.youtube.connected = true;
         state.youtube.viewers = viewers;
         state.youtube.isLive = isLive;
         broadcastViewers();
