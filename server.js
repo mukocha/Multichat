@@ -154,6 +154,11 @@ function dispatchAlert(alertData) {
 
 // Cargar configuración persistente
 function loadConfig() {
+  try {
+    if (!fs.existsSync(CONFIG_FILE) && fs.existsSync(path.join(ROOT_DIR, 'config.example.json'))) {
+      fs.copyFileSync(path.join(ROOT_DIR, 'config.example.json'), CONFIG_FILE);
+    }
+  } catch (e) {}
   let cfg = {
     kickUsername: process.env.KICK_USERNAME || '',
     tiktokUsername: process.env.TIKTOK_USERNAME || '',

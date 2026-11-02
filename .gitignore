@@ -1,6 +1,7 @@
 node_modules/
 bin/
 .env
+config.json
 public/uploads/*
 !public/uploads/.gitkeep
 *.zip

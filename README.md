@@ -36,10 +36,10 @@ El sistema todo-en-uno definitivo para streaming simultáneo en **Kick**, **TikT
 
 ### ⚙️ 4. Panel de Ajustes y Canales (`/dock.html` > Ajustes)
 - Conecta tus canales:
-  - 🟢 **Kick Username:** (ej. `chamukoi`)
-  - 📱 **TikTok Username:** (ej. `keviinluna_`)
-  - 🟣 **Twitch Username:** (ej. `chamukop`)
-  - 🔴 **YouTube Handle:** (ej. `@CHAMUKO`)
+  - 🟢 **Kick Username:** (ej. `tu_canal`)
+  - 📱 **TikTok Username:** (ej. `@tu_usuario`)
+  - 🟣 **Twitch Username:** (ej. `tu_canal`)
+  - 🔴 **YouTube Handle:** (ej. `@tu_canal`)
 - **Estilos del Chat en Pantalla (`/chat.html`):**
   - Tema: *Transparente*, *Glassmorphism (desenfoque translúcido)* o *Sólido Oscuro*.
   - Tamaño de letra: 14px, 16px, 18px, 22px o 26px.
