@@ -1254,6 +1254,9 @@
       if (audioCtx.state === 'suspended') audioCtx.resume();
       return audioCtx;
     }
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, () => { getAudioContext(); }, { once: true });
+    });
 
     const SYNTH_EFFECTS = {
       chime: (vol) => {
@@ -1322,28 +1325,106 @@
       }
     };
 
-    function playSoundForKey(eventKey) {
+
+    function getNormalizedType(type) {
+      if (!type) return 'follow';
+      const t = String(type).toLowerCase();
+      if (t === 'follow') return 'follow';
+      if (t === 'sub' || t === 'subscription' || t === 'giftsub') return 'sub';
+      if (t.includes('gift') || t === 'cheer' || t === 'bits') return 'gift';
+      if (t === 'host') return 'host';
+      if (t === 'raid' || t === 'share') return 'raid';
+      return 'follow';
+    }
+
+    function resolveAlertMedia(alert) {
+      if (!config.alertMedia) return { image: '', sound: '', volume: (config.alertVolume || 80) };
+      const platform = (alert.platform || 'kick').toLowerCase();
+      const type = (alert.type || 'follow').toLowerCase();
+
+      let specificKey = '';
+      if (platform === 'tiktok') {
+        if (type === 'follow') specificKey = 'tiktok_follow';
+        else if (type === 'share') specificKey = 'tiktok_share';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('le')) specificKey = 'tiktok_gift_lion';
+        else if (alert.gift && alert.gift.name && alert.gift.name.toLowerCase().includes('ros')) specificKey = 'tiktok_gift_rose';
+        else specificKey = 'tiktok_gift';
+      } else if (platform === 'kick') {
+        if (type === 'follow') specificKey = 'kick_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'kick_sub';
+        else if (type === 'giftsub' || type === 'gift-sub' || (alert.title && alert.title.toLowerCase().includes('regalada'))) specificKey = 'kick_giftsub';
+        else if (type === 'host') specificKey = 'kick_host';
+        else if (type === 'raid') specificKey = 'kick_raid';
+      } else if (platform === 'twitch') {
+        if (type === 'follow') specificKey = 'twitch_follow';
+        else if (type === 'sub' || type === 'subscription') specificKey = 'twitch_sub';
+        else if (type === 'host') specificKey = 'twitch_host';
+        else if (type === 'raid') specificKey = 'twitch_raid';
+        else if (type === 'bits' || type === 'cheer') specificKey = 'twitch_bits';
+      } else if (platform === 'youtube') {
+        if (type === 'sub' || type === 'follow' || type === 'subscription') specificKey = 'youtube_sub';
+        else if (type === 'member' || type === 'membership') specificKey = 'youtube_member';
+        else if (type === 'superchat' || type === 'super_chat' || type === 'gift') specificKey = 'youtube_superchat';
+      }
+
+      const platKey = `${platform}_${type}`;
+      const normType = getNormalizedType(type);
+
+      let image = '';
+      let sound = '';
+      let volume = config.alertVolume !== undefined ? config.alertVolume : 80;
+
+      let fallbackKey = '';
+      if (specificKey === 'kick_raid') fallbackKey = 'kick_host';
+      else if (specificKey === 'kick_host') fallbackKey = 'kick_raid';
+
+      const candidateKeys = [specificKey, fallbackKey, platKey, normType].filter(Boolean);
+
+      for (const k of candidateKeys) {
+        if (!image && config.alertMedia[k] && config.alertMedia[k].image) {
+          image = config.alertMedia[k].image;
+        }
+        if (!sound && config.alertMedia[k] && config.alertMedia[k].sound) {
+          sound = config.alertMedia[k].sound;
+        }
+        if (config.alertMedia[k] && config.alertMedia[k].volume !== undefined) {
+          volume = config.alertMedia[k].volume;
+        }
+      }
+
+      return { image, sound, volume, key: specificKey || platKey };
+    }
+
+    function playSound(soundSrc = 'default', volume = 80, eventType = '') {
       if (!soundEnabled) return;
-      const media = (config.alertMedia && config.alertMedia[eventKey]) || {};
-      const vol = (media.volume !== undefined ? media.volume : (config.alertVolume || 80)) / 100;
-      const soundSrc = media.sound || 'default';
+      const volNum = typeof volume === 'number' ? volume : (parseInt(volume, 10) || (config.alertVolume || 80));
+      if (volNum <= 0) return;
+      const volRatio = Math.max(0, Math.min(1, volNum / 100));
 
       if (soundSrc === 'default' || !soundSrc) {
-        if (eventKey.includes('sub')) SYNTH_EFFECTS.fanfare(vol);
-        else if (eventKey.includes('gift')) SYNTH_EFFECTS.coin(vol);
-        else if (eventKey.includes('superchat')) SYNTH_EFFECTS.coin(vol);
-        else if (eventKey.includes('follow')) SYNTH_EFFECTS.chime(vol);
-        else SYNTH_EFFECTS.bubble(vol);
+        const t = (eventType || '').toLowerCase();
+        if (t.includes('sub') || t.includes('member')) SYNTH_EFFECTS.fanfare(volRatio);
+        else if (t.includes('gift') || t.includes('superchat') || t.includes('bits') || t.includes('coin')) SYNTH_EFFECTS.coin(volRatio);
+        else if (t.includes('follow')) SYNTH_EFFECTS.chime(volRatio);
+        else SYNTH_EFFECTS.bubble(volRatio);
       } else if (SYNTH_EFFECTS[soundSrc]) {
-        SYNTH_EFFECTS[soundSrc](vol);
+        SYNTH_EFFECTS[soundSrc](volRatio);
       } else {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
         audioPlayer.src = soundSrc;
-        audioPlayer.volume = Math.max(0, Math.min(1, vol));
+        audioPlayer.volume = volRatio;
         audioPlayer.play().catch(e => {
           console.warn('Fallback synth por audio custom:', e);
-          SYNTH_EFFECTS.chime(vol);
+          SYNTH_EFFECTS.chime(volRatio);
         });
       }
+    }
+
+    function playSoundForKey(eventKey) {
+      const media = (config.alertMedia && config.alertMedia[eventKey]) || {};
+      const vol = media.volume !== undefined ? media.volume : (config.alertVolume || 80);
+      playSound(media.sound || 'default', vol, eventKey);
     }
 
     // ==========================================
@@ -1480,7 +1561,8 @@
         { key: 'kick_follow', label: 'Nuevo Seguidor (Follow)' },
         { key: 'kick_sub', label: 'Nueva Suscripción (Sub)' },
         { key: 'kick_giftsub', label: 'Suscripciones Regaladas' },
-        { key: 'kick_host', label: 'Raid / Host Entrante' }
+        { key: 'kick_host', label: 'Host Entrante' },
+        { key: 'kick_raid', label: 'Raid Entrante' }
       ],
       tiktok: [
         { key: 'tiktok_follow', label: 'Nuevo Seguidor' },
@@ -1604,6 +1686,8 @@
       if (!config.alertMedia[key]) config.alertMedia[key] = {};
       config.alertMedia[key].sound = sound;
       saveConfigToServer(false);
+      const vol = config.alertMedia[key].volume !== undefined ? config.alertMedia[key].volume : (config.alertVolume || 80);
+      playSound(sound, vol, key);
     }
 
     function setEventVolume(key, vol) {
@@ -1611,6 +1695,8 @@
       if (!config.alertMedia[key]) config.alertMedia[key] = {};
       config.alertMedia[key].volume = parseInt(vol, 10);
       saveConfigToServer(false);
+      const snd = config.alertMedia[key].sound || 'default';
+      playSound(snd, vol, key);
     }
 
     function setEventImage(key, imgUrl) {
@@ -1828,6 +1914,14 @@
     });
 
     socket.on('viewers:update', renderViewers);
+    socket.on('config:update', (cfg) => {
+      if (!cfg) return;
+      config = cfg;
+      const vSounds = document.getElementById('view-sounds');
+      if (vSounds && vSounds.style.display === 'flex') {
+        renderSoundsList(activeSoundPlat);
+      }
+    });
 
     function renderViewers(v) {
       if (!v) return;
@@ -1923,9 +2017,8 @@
         descContent += ` <span style="background:rgba(254,9,121,0.25); color:#fe0979; border:1px solid rgba(254,9,121,0.4); padding:1px 5px; border-radius:3px; font-weight:700;">🎁 ${escapeHtml(alert.gift.name)} x${alert.gift.count || 1}</span>`;
       }
 
-      const evKey = `${plat}_${type}`;
-      const evImage = (config.alertMedia && config.alertMedia[evKey] && config.alertMedia[evKey].image) ||
-                      (config.alertMedia && config.alertMedia[type] && config.alertMedia[type].image) || '';
+      const media = resolveAlertMedia(alert);
+      const evImage = media.image || '';
       const imageHtml = evImage ? `<img src="${evImage}" style="width:36px; height:36px; object-fit:contain; border-radius:4px; background:#141620; border:1px solid rgba(255,255,255,0.12); flex-shrink:0;">` : '';
 
       div.innerHTML = `
@@ -1947,8 +2040,8 @@
       if (autoScroll) scrollToBottom(false);
       else scrollDownBtn.style.display = 'block';
 
-      // Reproducir sonido asignado al evento
-      playSoundForKey(evKey);
+      // Reproducir sonido asignado al evento con volumen y tipo resuelto
+      playSound(media.sound || 'default', media.volume, alert.type);
     });
 
     function trimChatStream() {

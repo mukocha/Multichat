@@ -255,7 +255,7 @@
 
     // Sintetizador Web Audio API: Sonidos nítidos y personalizables
     const SYNTH_EFFECTS = {
-      chime: (vol = 80) => {
+      chime: (vol = 80) => { if (!vol || vol <= 0) return;
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const v = (vol / 100);
@@ -270,7 +270,7 @@
         o1.start(now); o1.stop(now + 0.35);
         o2.start(now + 0.08); o2.stop(now + 0.35);
       },
-      fanfare: (vol = 80) => {
+      fanfare: (vol = 80) => { if (!vol || vol <= 0) return;
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const v = (vol / 100);
@@ -284,7 +284,7 @@
           osc.start(now + (i * 0.07)); osc.stop(now + (i * 0.07) + 0.3);
         });
       },
-      coin: (vol = 80) => {
+      coin: (vol = 80) => { if (!vol || vol <= 0) return;
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const v = (vol / 100);
@@ -298,7 +298,7 @@
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(now); osc.stop(now + 0.35);
       },
-      bubble: (vol = 80) => {
+      bubble: (vol = 80) => { if (!vol || vol <= 0) return;
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const v = (vol / 100);
@@ -311,7 +311,7 @@
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(now); osc.stop(now + 0.15);
       },
-      horn: (vol = 80) => {
+      horn: (vol = 80) => { if (!vol || vol <= 0) return;
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
         const v = (vol / 100);

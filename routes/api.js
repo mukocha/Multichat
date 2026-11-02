@@ -202,22 +202,29 @@ app.post('/api/test-alert', (req, res) => {
   const chosenUser = user || defaultUser;
   let defaultTitle = '¡Nueva Alerta!';
   let defaultDetail = `${chosenUser} ha interactuado en el canal`;
+  let defaultGift = gift || null;
 
   if (type === 'follow') {
     defaultTitle = platform === 'kick' ? '¡Nuevo Seguidor en Kick!' : (platform === 'twitch' ? '¡Nuevo Seguidor en Twitch!' : (platform === 'youtube' ? '¡Nuevo Suscriptor en YouTube!' : '¡Nuevo Seguidor en TikTok!'));
     defaultDetail = `${chosenUser} ahora te sigue en directo 💖`;
   } else if (type === 'sub' || type === 'subscription') {
-    defaultTitle = platform === 'kick' ? '¡Nueva Suscripción en Kick!' : (platform === 'twitch' ? '¡Nueva Suscripción en Twitch!' : (platform === 'youtube' ? '¡Nuevo Miembro en YouTube!' : '¡Nueva Suscripción!'));
-    defaultDetail = `${chosenUser} se ha suscrito al canal (Tier 1) ⭐`;
+    defaultTitle = platform === 'kick' ? '¡Nueva Suscripción en Kick!' : (platform === 'twitch' ? '¡Nueva Suscripción en Twitch!' : (platform === 'youtube' ? '¡Nuevo Suscriptor en YouTube!' : '¡Nueva Suscripción!'));
+    defaultDetail = platform === 'youtube' ? `${chosenUser} se ha suscrito al canal 🔴` : `${chosenUser} se ha suscrito al canal (Tier 1) ⭐`;
   } else if (type === 'member' || type === 'membership') {
     defaultTitle = '¡Nuevo Miembro del Canal!';
     defaultDetail = `${chosenUser} se unió a las membresías del canal ⭐`;
   } else if (type === 'superchat' || type === 'super_chat') {
     defaultTitle = '¡Super Chat en YouTube!';
     defaultDetail = detail || `${chosenUser} envió un Super Chat de $10.00 USD 💸`;
-  } else if (type === 'giftsub') {
+  } else if (type === 'giftsub' || type === 'gift-sub') {
     defaultTitle = '¡Suscripciones Regaladas!';
-    defaultDetail = `${chosenUser} regaló 5 suscripciones a la comunidad ⭐`;
+    defaultDetail = `${chosenUser} regaló 5 suscripciones a la comunidad 🎁`;
+  } else if (type === 'bits' || type === 'cheer') {
+    defaultTitle = '¡Donación de Bits en Twitch!';
+    defaultDetail = detail || `${chosenUser} envió 100 Bits 💎`;
+  } else if (type === 'share') {
+    defaultTitle = '¡Transmisión Compartida en TikTok!';
+    defaultDetail = detail || `${chosenUser} compartió el directo 🚀`;
   } else if (type === 'gift') {
     if (platform === 'youtube') {
       defaultTitle = '¡Super Chat en YouTube!';
@@ -225,6 +232,14 @@ app.post('/api/test-alert', (req, res) => {
     } else {
       defaultTitle = '¡Regalo en TikTok!';
       defaultDetail = detail || `${chosenUser} envió Rosa x10 (10 🪙) 🌹`;
+      if (!defaultGift) {
+        defaultGift = {
+          name: 'Rosa',
+          count: 10,
+          coins: 10,
+          icon: 'https://p16-webcast.tiktokcdn.com/img/maliva/webcast-va/resource/rose.png~tplv-obj.png'
+        };
+      }
     }
   } else if (type === 'host') {
     const vCount = viewers || 38;
@@ -243,7 +258,7 @@ app.post('/api/test-alert', (req, res) => {
     user: user || defaultUser,
     title: title || defaultTitle,
     detail: detail || defaultDetail,
-    gift: gift || null,
+    gift: defaultGift,
     isTest: true,
     timestamp: Date.now()
   };
