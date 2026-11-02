@@ -1,8 +1,8 @@
 @echo off
-title Sincronizar con GitHub y AWS
+title Sincronizar con GitHub
 color 0A
 echo ========================================================
-echo        SUBIR CAMBIOS A GITHUB (Y ACTUALIZAR AWS)
+echo              SUBIR CAMBIOS A GITHUB
 echo ========================================================
 echo.
 
@@ -11,8 +11,8 @@ cd /d "%~dp0"
 echo Guardando cambios locales...
 git add .
 
-set /p MSG="Mensaje del cambio (presiona Enter para 'actualizacion de overlay'): "
-if "%MSG%"=="" set MSG=actualizacion de overlay
+set /p MSG="Mensaje del cambio (presiona Enter para 'actualizacion de multichat'): "
+if "%MSG%"=="" set MSG=actualizacion de multichat
 
 git commit -m "%MSG%"
 echo.
@@ -23,10 +23,6 @@ if %errorlevel% equ 0 (
     echo.
     echo ========================================================
     echo   [EXITO] Cambios subidos correctamente a GitHub!
-    echo.
-    echo   Para actualizar tu servidor de AWS EC2:
-    echo   En tu ventana de PuTTY solo escribe:
-    echo     cd ~/stream-overlay ^&^& git pull ^&^& pm2 restart stream-overlay
     echo ========================================================
 ) else (
     echo.

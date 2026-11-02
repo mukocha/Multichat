@@ -2,6 +2,8 @@
 
 El sistema todo-en-uno definitivo para streaming simultáneo en **Kick**, **TikTok Live**, **Twitch** y **YouTube**. Diseñado para creadores de contenido que transmiten en múltiples plataformas a la vez y necesitan un único panel integrado en OBS Studio para leer el chat, monitorizar espectadores, recibir alertas con GIFs y sonidos personalizados, y configurar todo en tiempo real.
 
+> ⚡ **100% Local y Portable:** Funciona en cualquier PC con Windows sin necesidad de instalar Node.js ni programas complicados. Solo descargas y haces doble clic en `start.bat`.
+
 ---
 
 ## ✨ Características Principales
@@ -9,9 +11,9 @@ El sistema todo-en-uno definitivo para streaming simultáneo en **Kick**, **TikT
 ### 📌 1. Panel Dock Integrado para OBS Studio (`/dock.html`)
 - **HUD de Espectadores en Vivo:** Contadores en tiempo real de Twitch, Kick, TikTok y YouTube, además de un contador total sincronizado.
 - **Feed Unificado de Mensajes:** Mensajes con insignias de color por plataforma:
-  - 🟢 **Kick** (verde neón)
+  - 🟢 **Kick** (verde neón con WebSocket Centrifugo en tiempo real)
   - 📱 **TikTok** (fucsia)
-  - 🟣 **Twitch** (morado)
+  - 🟣 **Twitch** (morado vía IRC WebSocket)
   - 🔴 **YouTube** (rojo)
 - **Filtros Rápidos:** Alterna entre *Todos*, *Solo Chat*, o *Solo Alertas* con 1 clic.
 - **Botón de Auto-Scroll:** Mantén la vista anclada al último mensaje con alerta de mensajes nuevos.
@@ -35,7 +37,7 @@ El sistema todo-en-uno definitivo para streaming simultáneo en **Kick**, **TikT
 - **Prueba Inmediata:** Botón `▶ Probar Alerta` en cada tarjeta sin cambiar de pestaña.
 
 ### ⚙️ 4. Panel de Ajustes y Canales (`/dock.html` > Ajustes)
-- Conecta tus canales:
+- Conecta tus canales en segundos:
   - 🟢 **Kick Username:** (ej. `tu_canal`)
   - 📱 **TikTok Username:** (ej. `@tu_usuario`)
   - 🟣 **Twitch Username:** (ej. `tu_canal`)
@@ -49,69 +51,44 @@ El sistema todo-en-uno definitivo para streaming simultáneo en **Kick**, **TikT
   - Volumen global y editor de CSS personalizado para OBS.
 
 ### 🔗 5. Gestor de Enlaces OBS con 1 Clic (`/dock.html` > OBS)
-Copia las URLs con 1 clic y con las dimensiones recomendadas para pegar directamente en OBS Studio.
+Copia las URLs con 1 solo clic y con las dimensiones recomendadas listas para pegar en tu OBS Studio.
 
 ---
 
-## 🚀 Guías de Instalación
+## 🚀 Inicio Rápido en PC Local (Windows)
 
-### Opción A: En tu PC Local (Windows)
-1. Asegúrate de tener instalado [Node.js](https://nodejs.org/) (versión 18 o superior).
-2. Clona o descarga este repositorio:
-   ```bash
-   git clone https://github.com/mukocha/Multichat.git
-   cd Multichat
-   ```
-3. Haz doble clic en **`start.bat`**.
-   - El script instalará las dependencias automáticamente y abrirá tu navegador en:
-     👉 **`http://localhost:3000/dock.html`**
+No requieres conocimientos técnicos ni instalar programas pesados:
+
+### Paso 1: Descargar el Proyecto
+- Haz clic en el botón verde **`Code` > `Download ZIP`** arriba a la derecha en GitHub y descomprime la carpeta en tu computadora.
+- *(O si usas Git: `git clone https://github.com/mukocha/Multichat.git`)*.
+
+### Paso 2: Iniciar
+- Haz doble clic en el archivo **`start.bat`**.
+- El lanzador inteligente preparará el entorno portable automáticamente en segundos y abrirá tu navegador predeterminado en:
+  👉 **`http://localhost:3000/dock.html`**
+
+### Paso 3: Configurar tus Canales
+1. En el panel que se abre en tu navegador, haz clic en la pestaña **Canales** (o Ajustes).
+2. Escribe los nombres de tus cuentas de Kick, TikTok, Twitch o YouTube.
+3. Haz clic en **"Guardar Canales"** y comenzará a conectar en vivo inmediatamente.
 
 ---
 
-### Opción B: Despliegue 24/7 en la Nube (AWS EC2 / Ubuntu / Linux)
-Ideal para que el bot y los overlays funcionen 24/7 desde una dirección IP pública:
+## ⚡ Opcional: Iniciar Automático con Windows en Segundo Plano
 
-1. Conéctate a tu servidor por SSH (vía PuTTY o terminal):
-   ```bash
-   ssh -i "tu-llave.pem" ubuntu@tu-ip-ec2
-   ```
-2. Instala Node.js y Git si aún no los tienes:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-   sudo apt-get install -y nodejs git
-   ```
-3. Clona el repositorio:
-   ```bash
-   git clone https://github.com/mukocha/Multichat.git
-   cd Multichat
-   npm install
-   ```
-4. Instala **PM2** para mantener el proceso corriendo de forma permanente:
-   ```bash
-   sudo npm install -g pm2
-   pm2 start server.js --name "multichat"
-   pm2 startup
-   pm2 save
-   ```
-5. En el panel de AWS (Security Groups), abre el puerto de entrada:
-   - **Tipo:** TCP personalizado
-   - **Puerto:** `3000`
-   - **Origen:** `0.0.0.0/0` (o tu IP)
-6. Abre tu navegador en:
-   👉 **`http://TU-IP-EC2:3000/dock.html`**
+Si quieres que MultiChat arranque automáticamente cada vez que enciendas tu PC, sin tener que abrir nada a mano y sin molestas ventanas de consola:
 
-> 💡 **Para actualizar cambios futuros en AWS:**
-> ```bash
-> cd ~/Multichat
-> git pull
-> pm2 restart multichat
-> ```
+1. Haz doble clic en **`activar-inicio-con-windows.bat`**.
+2. ¡Listo! El script creará un acceso directo en el inicio de Windows que ejecutará el servidor en segundo plano silencioso mediante `iniciar-oculto.vbs`.
 
 ---
 
 ## 🎥 Configuración en OBS Studio
 
-| Fuente / Panel | URL | Dimensiones Recomendadas | Tipo en OBS |
+Una vez iniciado `start.bat`, agrega las siguientes fuentes en OBS Studio:
+
+| Fuente / Panel | URL en OBS | Dimensiones Recomendadas | Tipo en OBS |
 | :--- | :--- | :--- | :--- |
 | **MultiChat Dock** | `http://localhost:3000/dock.html` | Panel lateral acoplable | **Docks (Paneles)** > Paneles de navegador personalizados |
 | **Chat en Pantalla** | `http://localhost:3000/chat.html` | `400 x 650` px | **Fuentes (+)** > Navegador (Browser) |
@@ -119,7 +96,7 @@ Ideal para que el bot y los overlays funcionen 24/7 desde una dirección IP púb
 | **Barra de Viewers** | `http://localhost:3000/viewers.html` | `600 x 60` px | **Fuentes (+)** > Navegador (Browser) |
 | **Historial de Eventos** | `http://localhost:3000/events.html` | `380 x 500` px | **Fuentes (+)** > Navegador (Browser) |
 
-*(Nota: Si usas AWS EC2, sustituye `localhost:3000` por la IP pública de tu servidor, ej: `3.22.167.107:3000`).*
+> 💡 **Consejo en OBS:** Marca la casilla *"Actualizar el navegador cuando la escena se active"* en las propiedades de la fuente de navegador si deseas un refresco limpio.
 
 ---
 
@@ -127,15 +104,19 @@ Ideal para que el bot y los overlays funcionen 24/7 desde una dirección IP púb
 
 ```text
 Multichat/
-├── config.json              # Configuración activa (canales, sonidos, temas, volúmenes)
-├── config.example.json      # Plantilla de ejemplo de configuración
-├── server.js                # Servidor Node.js Express y Socket.IO
-├── start.bat                # Lanzador automático de 1 clic para Windows
+├── config.example.json      # Plantilla limpia de configuración inicial
+├── config.json              # Tu configuración personal local (protegida en .gitignore)
+├── server.js                # Servidor Node.js Express, Socket.IO y WebSocket
+├── start.bat                # Lanzador inteligente 1-clic con auto-instalador portable
+├── iniciar-oculto.vbs       # Inicio silencioso en segundo plano sin ventana
+├── activar-inicio-con-windows.bat # Instalador de arranque automático con Windows
+├── subir-a-github.bat       # Utilidad para sincronizar cambios a GitHub
+├── bin/                     # Entorno portable de Node.js (descargado automáticamente)
 ├── platforms/               # Conectores de streaming en tiempo real
-│   ├── kick.js              # WebSocket directo de Kick y polling
+│   ├── kick.js              # WebSocket Centrifugo v2 directo de Kick y polling
 │   ├── tiktok.js            # Conector TikTok Live Connector
 │   ├── twitch.js            # IRC WebSocket anónimo de Twitch
-│   └── youtube.js           # Scraper de estado y espectadores de YouTube
+│   └── youtube.js           # Monitorización de estado y espectadores de YouTube
 ├── routes/
 │   └── api.js               # Rutas REST (/api/status, /api/upload, /api/config, etc.)
 ├── services/
@@ -155,14 +136,14 @@ Multichat/
 
 ---
 
-## 🛡️ Seguridad y Consideraciones Públicas
+## 🛡️ Privacidad y Seguridad
 
-- **No se requieren contraseñas ni tokens privados:** Los conectores de chat y espectadores utilizan APIs y WebSockets públicos de las plataformas.
-- **Validación de Archivos:** Las subidas en `/api/upload` validan tanto la extensión MIME como las firmas de bytes reales (`magic bytes`) para evitar archivos maliciosos.
-- **Tamaño Máximo:** Hasta 25 MB por archivo multimedia.
+- **100% Privado:** Tu archivo `config.json` con tus canales y configuraciones locales está excluido de Git (`.gitignore`). Nadie más verá tus nombres al clonar el repositorio.
+- **Sin Contraseñas ni Tokens:** El sistema se conecta a los chats y espectadores mediante conexiones públicas, sin necesidad de tokens OAuth privados ni contraseñas.
+- **Validación Estricta de Archivos:** Las subidas en `/api/upload` validan extensiones MIME y firmas de bytes reales (`magic bytes`) para evitar archivos maliciosos.
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto es de código abierto bajo la licencia [MIT](LICENSE). Siéntete libre de modificarlo y adaptarlo a tu propio setup de streaming.
+Este proyecto es de código abierto bajo la licencia [MIT](LICENSE). Siéntete libre de utilizarlo y adaptarlo a tu propio setup de streaming.
