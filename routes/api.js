@@ -99,6 +99,15 @@ app.post('/api/alerts/clear', (req, res) => {
   res.json({ ok: true });
 });
 
+// Limpiar chat en vivo y alertas en todas las pantallas
+app.post('/api/chat/clear', (req, res) => {
+  state.lastClearedAt = Date.now();
+  alertHistory.length = 0;
+  io.emit('chat:clear');
+  io.emit('alert:history', []);
+  res.json({ ok: true, clearedAt: state.lastClearedAt });
+});
+
 app.post('/api/connect', async (req, res) => {
   const { kickUsername, tiktokUsername, twitchUsername, youtubeChannel, force } = req.body || {};
   for (const [key, value] of Object.entries({ kickUsername, tiktokUsername, twitchUsername, youtubeChannel })) {

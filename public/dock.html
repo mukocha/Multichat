@@ -895,18 +895,7 @@
       </div>
 
       <!-- Feed Denso de Chat y Alertas -->
-      <div id="chat-stream">
-        <div class="msg-event-card kick" style="margin-top:2px;">
-          <div class="ev-header">
-            <div class="ev-title-wrap">
-              <span class="platform-badge badge-kick">KICK</span>
-              <span class="ev-title">MultiChat Conectado</span>
-            </div>
-            <span class="ev-time">ahora</span>
-          </div>
-          <div class="ev-desc">Monitoreando Kick, TikTok, Twitch y YouTube...</div>
-        </div>
-      </div>
+      <div id="chat-stream"></div>
 
       <button id="btn-scroll-down" onclick="scrollToBottom(true)">↓ Nuevos mensajes</button>
 
@@ -1957,7 +1946,13 @@
       document.getElementById('dot-youtube').className = 'v-dot youtube ' + (checkLive(v.youtube, youtubeCount) ? '' : 'off');
     }
 
+    socket.on('chat:clear', () => {
+      chatStream.innerHTML = '';
+    });
+
     socket.on('chat:message', (msg) => {
+      const clearedAt = parseInt(localStorage.getItem('multichat_cleared_at') || '0', 10);
+      if (msg.timestamp && msg.timestamp < clearedAt) return;
       const plat = (msg.platform || 'kick').toLowerCase();
       const div = document.createElement('div');
       div.className = `msg-chat-item item-chat plat-${plat}`;
@@ -2086,6 +2081,9 @@
 
     function clearFeed() {
       chatStream.innerHTML = '';
+      try { localStorage.setItem('multichat_cleared_at', Date.now()); } catch (_) {}
+      fetch('/api/chat/clear', { method: 'POST' }).catch(() => {});
+      if (typeof socket !== 'undefined' && socket && socket.connected) socket.emit('chat:clear');
     }
 
     function toggleMute() {

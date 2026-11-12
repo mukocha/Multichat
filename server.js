@@ -86,6 +86,7 @@ app.use(express.static(path.join(ROOT_DIR, 'public'), {
 
 // Estado de conexión
 const state = {
+  lastClearedAt: 0,
   kick: {
     connected: false,
     connecting: false,
@@ -368,6 +369,12 @@ io.on('connection', (socket) => {
   // Enviar historial de notificaciones no vencidas al cliente que se conecta
   cleanExpiredAlerts();
   socket.emit('alert:history', alertHistory);
+
+  socket.on('chat:clear', () => {
+    state.lastClearedAt = Date.now();
+    alertHistory.length = 0;
+    io.emit('chat:clear');
+  });
 });
 
 app.use((err, req, res, next) => {

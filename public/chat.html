@@ -225,6 +225,10 @@
     }
 
     // Escuchar cambios de configuración desde el panel web
+    socket.on('chat:clear', () => {
+      container.innerHTML = '';
+    });
+
     socket.on('config:update', (cfg) => {
       if (!urlTheme && cfg.chatTheme) currentTheme = cfg.chatTheme;
       if (!urlFontSize && cfg.chatFontSize) currentFontSize = cfg.chatFontSize;
