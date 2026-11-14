@@ -283,6 +283,14 @@ app.post('/api/test-chat', (req, res) => {
   if (user !== undefined && (typeof user !== 'string' || user.length > 100)) return res.status(400).json({ ok: false, error: 'El usuario debe tener hasta 100 caracteres.' });
   if (message !== undefined && (typeof message !== 'string' || message.length > 1000)) return res.status(400).json({ ok: false, error: 'El mensaje debe tener hasta 1000 caracteres.' });
 
+  const cleanCmd = (message || '').trim().toLowerCase();
+  if (cleanCmd === '/clean' || cleanCmd === '/clear') {
+    state.lastClearedAt = Date.now();
+    alertHistory.length = 0;
+    io.emit('chat:clear', state.lastClearedAt);
+    return res.json({ ok: true, cleared: true });
+  }
+
   let defaultUser = 'KickGamer';
   let defaultMsg = '¡Hola desde Kick! Saludos al stream 🟢';
   let defaultBadges = ['moderator', 'subscriber'];
