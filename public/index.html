@@ -1928,6 +1928,20 @@
     let hasChatMessages = false;
     let currentChatFilter = 'all';
 
+    socket.on('chat:clear', () => {
+      chatMonitor.innerHTML = '<div class="text-center text-gray-500 py-24">Monitor limpiado. Esperando nuevos mensajes...</div>';
+      hasChatMessages = false;
+      totalChatReceived = 0;
+      if (chatMsgCount) chatMsgCount.textContent = '0 mensajes';
+    });
+
+    socket.on('chat:cleared_at', () => {
+      chatMonitor.innerHTML = '<div class="text-center text-gray-500 py-24">Esperando mensajes en vivo de Kick, TikTok, Twitch o YouTube...</div>';
+      hasChatMessages = false;
+      totalChatReceived = 0;
+      if (chatMsgCount) chatMsgCount.textContent = '0 mensajes';
+    });
+
     socket.on('chat:message', (msg) => {
       if (!hasChatMessages) {
         chatMonitor.innerHTML = '';
@@ -1997,6 +2011,8 @@
       hasChatMessages = false;
       totalChatReceived = 0;
       if (chatMsgCount) chatMsgCount.textContent = '0 mensajes';
+      fetch('/api/chat/clear', { method: 'POST' }).catch(() => {});
+      if (typeof socket !== 'undefined' && socket && socket.connected) socket.emit('chat:clear');
     }
 
     // Monitor de Historial de Alertas
