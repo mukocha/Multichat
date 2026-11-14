@@ -369,11 +369,14 @@ io.on('connection', (socket) => {
   // Enviar historial de notificaciones no vencidas al cliente que se conecta
   cleanExpiredAlerts();
   socket.emit('alert:history', alertHistory);
+  if (state.lastClearedAt) {
+    socket.emit('chat:cleared_at', state.lastClearedAt);
+  }
 
   socket.on('chat:clear', () => {
     state.lastClearedAt = Date.now();
     alertHistory.length = 0;
-    io.emit('chat:clear');
+    io.emit('chat:clear', state.lastClearedAt);
   });
 });
 

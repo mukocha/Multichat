@@ -224,8 +224,19 @@
       lines.forEach(l => l.style.fontSize = `${currentFontSize}px`);
     }
 
-    // Escuchar cambios de configuración desde el panel web
-    socket.on('chat:clear', () => {
+    let lastClearedTimestamp = parseInt(localStorage.getItem('multichat_cleared_at') || '0', 10);
+
+    socket.on('chat:cleared_at', (ts) => {
+      if (ts && ts > lastClearedTimestamp) {
+        lastClearedTimestamp = ts;
+        try { localStorage.setItem('multichat_cleared_at', ts); } catch (_) {}
+        container.innerHTML = '';
+      }
+    });
+
+    socket.on('chat:clear', (ts) => {
+      lastClearedTimestamp = ts || Date.now();
+      try { localStorage.setItem('multichat_cleared_at', lastClearedTimestamp); } catch (_) {}
       container.innerHTML = '';
     });
 
@@ -241,6 +252,7 @@
 
     socket.on('chat:message', (msg) => {
       if (!msg) return;
+      if (msg.timestamp && lastClearedTimestamp && msg.timestamp < lastClearedTimestamp) return;
       if (msg.id && !msg.isTest) {
         if (seenChatIds.has(msg.id)) return;
         seenChatIds.add(msg.id);

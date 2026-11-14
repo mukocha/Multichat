@@ -94,10 +94,26 @@ function connectTwitch(channel) {
       });
     });
 
+    client.on('clearchat', () => {
+      if (state.twitch.client !== client) return;
+      console.log('[Twitch] clearchat recibido. Limpiando chat globalmente en OBS y Dock...');
+      state.lastClearedAt = Date.now();
+      if (state.alertHistory) state.alertHistory.length = 0;
+      io.emit('chat:clear', state.lastClearedAt);
+    });
+
     client.on('message', (targetChannel, tags, message, self) => {
       if (self || state.twitch.client !== client) return;
 
       const user = tags['display-name'] || tags.username || 'twitch_user';
+      const trimmed = (message || '').trim().toLowerCase();
+      if (trimmed === '/clean' || trimmed === '/clear') {
+        console.log(`[Twitch] Comando '${trimmed}' ejecutado por @${user}. Limpiando chat globalmente...`);
+        state.lastClearedAt = Date.now();
+        if (state.alertHistory) state.alertHistory.length = 0;
+        io.emit('chat:clear', state.lastClearedAt);
+        return;
+      }
       const userColor = tags.color || getDeterministicColor(user);
       const badges = [];
       if (tags.badges) {

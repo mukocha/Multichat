@@ -1946,7 +1946,17 @@
       document.getElementById('dot-youtube').className = 'v-dot youtube ' + (checkLive(v.youtube, youtubeCount) ? '' : 'off');
     }
 
-    socket.on('chat:clear', () => {
+    socket.on('chat:cleared_at', (ts) => {
+      const current = parseInt(localStorage.getItem('multichat_cleared_at') || '0', 10);
+      if (ts && ts > current) {
+        try { localStorage.setItem('multichat_cleared_at', ts); } catch (_) {}
+        chatStream.innerHTML = '';
+      }
+    });
+
+    socket.on('chat:clear', (ts) => {
+      const clearedAt = ts || Date.now();
+      try { localStorage.setItem('multichat_cleared_at', clearedAt); } catch (_) {}
       chatStream.innerHTML = '';
     });
 

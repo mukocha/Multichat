@@ -329,8 +329,35 @@ function handleKickEvent(payload) {
     parsedData = data;
   }
 
+  // Detección de eventos de limpieza / moderación emitidos por Kick
+  if (event && (event.includes('Clear') || event.includes('Clean') || event.includes('ChatroomClear') || event.includes('ClearChat'))) {
+    console.log(`[Kick Event] Evento de limpieza de sala recibido: ${event}`);
+    state.lastClearedAt = Date.now();
+    if (state.alertHistory) state.alertHistory.length = 0;
+    io.emit('chat:clear', state.lastClearedAt);
+    return;
+  }
+
   // 1. Mensaje de Chat en Kick
   if (event === 'App\\Events\\ChatMessageEvent') {
+    const rawContent = (parsedData.content || '').trim();
+    const rawLower = rawContent.toLowerCase();
+
+    // Detección directa del comando /clean o /clear escrito en el chat de Kick
+    if (rawLower === '/clean' || rawLower === '/clear') {
+      console.log(`[Kick Chat] Comando de limpieza '${rawLower}' ejecutado por @${parsedData.sender?.username || 'usuario'}. Limpiando chat globalmente en OBS y Dock...`);
+      state.lastClearedAt = Date.now();
+      if (state.alertHistory) state.alertHistory.length = 0;
+      io.emit('chat:clear', state.lastClearedAt);
+      return;
+    }
+
+    const msgCreatedAt = parsedData.created_at ? new Date(parsedData.created_at).getTime() : Date.now();
+    if (state.lastClearedAt && msgCreatedAt < state.lastClearedAt) {
+      // Ignorar mensajes antiguos del buffer de Kick previos a la última limpieza
+      return;
+    }
+
     const sender = parsedData.sender || {};
     const identity = sender.identity || {};
     const chatMsg = {
@@ -342,7 +369,7 @@ function handleKickEvent(payload) {
       color: identity.color || getDeterministicColor(sender.username || 'kick_user'),
       avatar: sender.profile_thumb || '',
       badges: (identity.badges || []).map(b => b.type || b.text),
-      timestamp: Date.now()
+      timestamp: msgCreatedAt
     };
 
     console.log(`[Kick Chat] ${chatMsg.user}: ${chatMsg.message}`);
